@@ -1,8 +1,7 @@
 library(targets)
 library(tarchetypes)
-library(tibble)
 
-future::plan(future.callr::callr)
+#future::plan(future.callr::callr)
 
 packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "GGally", "ggrepel", "uwot", "limma", "tidyverse")
 tar_option_set(packages = packages, format = "qs")

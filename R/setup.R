@@ -5,7 +5,7 @@ REPORTERS <- 1:10
 
 EVIDENCE_FILE <- "mq_data/evidence.txt"
 
-EVIDENCE_DATA_COLUMNS <- tribble(
+EVIDENCE_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
   "sequence", "Sequence", "c",
   "modified_sequence", "Modified sequence", "c",
@@ -25,7 +25,7 @@ EVIDENCE_DATA_COLUMNS <- tribble(
 
 PROTEINS_FILE <- "mq_data/proteinGroups.txt"
 
-PROTEINS_DATA_COLUMNS <- tribble(
+PROTEINS_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
   "id", "id", "i",
   "peptide_ids", "Peptide IDs", "c",
@@ -39,9 +39,9 @@ PROTEINS_DATA_COLUMNS <- tribble(
 
 PROTEINS_ID_COLUMNS <- c("id")
 
-PROTEINS_MEASURE_COLUMNS <- tibble(
+PROTEINS_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
-  column_name = glue::glue("Reporter intensity corrected {reporter} Phospho") %>% as.character()
+  column_name = glue::glue("Reporter intensity corrected {reporter} Phospho") |> as.character()
 )
 
 KEEP_PROTEINS_COLUMNS <- c("peptide_ids", "phospho_ids", "protein", "gene_name")
@@ -52,7 +52,7 @@ KEEP_PROTEINS_COLUMNS <- c("peptide_ids", "phospho_ids", "protein", "gene_name")
 
 PEPTIDES_FILE <- "mq_data/peptides.txt"
 
-PEPTIDES_DATA_COLUMNS <- tribble(
+PEPTIDES_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
   "id", "id", "i",
   "phospho_ids", "Phospho (STY) site IDs", "c",
@@ -68,9 +68,9 @@ PEPTIDES_DATA_COLUMNS <- tribble(
 
 PEPTIDES_ID_COLUMNS <- c("id")
 
-PEPTIDES_MEASURE_COLUMNS <- tibble(
+PEPTIDES_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
-  column_name = glue::glue("Reporter intensity corrected {reporter}") %>% as.character()
+  column_name = glue::glue("Reporter intensity corrected {reporter}") |> as.character()
 )
 
 KEEP_PEPTIDES_COLUMNS <- c("phospho_ids", "protein", "gene_name")
@@ -80,7 +80,7 @@ KEEP_PEPTIDES_COLUMNS <- c("phospho_ids", "protein", "gene_name")
 
 PHOSPHO_FILE <- "mq_data/Phospho (STY)Sites.txt"
 
-PHOSPHO_DATA_COLUMNS <- tribble(
+PHOSPHO_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
   "id", "id", "i",
   "peptide_ids", "Peptide IDs", "c",
@@ -106,18 +106,27 @@ PHOSPHO_ID_COLUMNS <- c("id")
 
 KEEP_PHOSPHO_COLUMNS <- c("protein", "gene_name", "position", "localization_prob")
 
-PHOSPHO_MEASURE_COLUMNS <- tibble(
+PHOSPHO_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
-  column_name = glue::glue("Reporter intensity corrected {reporter}___1") %>% as.character()
+  column_name = glue::glue("Reporter intensity corrected {reporter}___1") |> as.character()
 )
 
 
-SAMPLE_REPORTER <- tibble(
+SAMPLE_REPORTER <- tibble::tibble(
   reporter = REPORTERS,
   sample = c("DMSO-1", "DMSO-2", "DMSO-3", "DMSO-4", "DMSO-5", "MEKi-1", "MEKi-2", "MEKi-3", "MEKi-4", "MEKi-5")
 )
 
-CONDITIONS <- tibble(condition = c("DMSO", "MEKi"))
+CONDITIONS <- tibble::tibble(CONDITION = c("DMSO", "MEKi"))
+
+NORMALISATIONS <- tibble::tibble(
+  NAME = c("median", "constand", "protein", "mean_protein"),
+  WHAT = c("value_med", "value_constand", "value_prot", "value_prot_mean"),
+  LOG = c(TRUE, FALSE, TRUE, TRUE)
+)
+
+NORM_COND <- tidyr::expand_grid(NORMALISATIONS, CONDITIONS) |>
+  dplyr::mutate(NAME = paste0(NAME, "_", CONDITION))
 
 FDR_LIMIT <- 0.05
 LOGFC_LIMIT <- 0

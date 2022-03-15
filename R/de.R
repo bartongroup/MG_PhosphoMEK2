@@ -8,7 +8,7 @@ prepare_phospho_counts <- function(pho, loc_prob_limit=0.95) {
 
 
 limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=NULL, what = "value_med", log_scale=TRUE, loc_prob_limit=0.95) {
-  if(!is.null(set$info$localization_prob)) {
+  if("localization_prob" %in% colnames(set$info)) {
     d <- prepare_phospho_counts(set, loc_prob_limit)
   } else {
     d <- set$dat

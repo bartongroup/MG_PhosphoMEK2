@@ -10,40 +10,39 @@ targets_main <- function() {
   )
   
   read_data <- list(
-    tar_target(metadata, make_metadata(SAMPLE_REPORTER, CONDITIONS$condition)),
+    tar_target(metadata, make_metadata(SAMPLE_REPORTER, CONDITIONS$CONDITION)),
     tar_target(proteins, read_mq(PROTEINS_FILE, PROTEINS_DATA_COLUMNS, PROTEINS_MEASURE_COLUMNS, PROTEINS_ID_COLUMNS, metadata)),
-    #tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, metadata)),
+    tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, metadata)),
     tar_target(phospho, read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, metadata) %>% 
       normalise_to_proteins(proteins)),
     tar_target(phospho_rep, read_phospho_reporters(PHOSPHO_FILE))
   )
   
-  pho_vs_pro <- list(
-    tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins))
-  )
-  
   stats <- list(
     tar_target(phospho_rep_names, phospho_rep %>% pull(column_name) %>% unique()),
-    #tar_target(quants, q_numbers(phospho, peptides, proteins)),
+    tar_target(quants, q_numbers(phospho, peptides, proteins)),
     tar_target(detected_genes, get_detected_genes(phospho)),
-    #tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
+    tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
     tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length())
   )
   
-  de <- list(
-    tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = "value_med", log_scale = TRUE, loc_prob_limit=0.95)),
-    tar_target(phospho_n_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = "value_prot", log_scale = TRUE, loc_prob_limit=0.95)),
-    #tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
-    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
+  proteins <- list(
+    tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
+    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE))
+  )
+  
+  map_normalisations <- tar_map(
+    values = NORMALISATIONS,
+    names = NAME,
+  
+    tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = WHAT, log_scale = LOG, loc_prob_limit=0.95)),
     
     tar_target(fig_volcano, plot_volcano(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
-    tar_target(fig_volcano_n, plot_volcano(phospho_n_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
-    
     tar_target(fig_ma, plot_ma(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_up_down, plot_up_down(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
-    
-    tar_target(de_pho, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id)),
-    tar_target(de_pho_n, phospho_n_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id))
+    tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG)),
+
+    tar_target(de_sites, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id))
   )
   
   fgsea <- list(
@@ -57,39 +56,37 @@ targets_main <- function() {
   figures <- list(
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
-    tar_target(fig_sample_dist_med, plot_sample_distirbutions(phospho, "value_med", log_scale = TRUE)),
-    tar_target(fig_sample_dist_constand, plot_sample_distirbutions(phospho, "value_constand", log_scale = FALSE)),
-    
-    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "3130"))
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "3130")),
+    tar_target(fig_pho_per_pep,plot_phospho_per_peptide(peptides, phospho)),
+    tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins))
   )
   
   figures_pairs <- tar_map(
-    values = CONDITIONS,
-    tar_target(fig_pair_med, plot_replicate_pairs(phospho, condition, what = "value_med", log_scale = TRUE)),
-    tar_target(fig_pair_constand, plot_replicate_pairs(phospho, condition, what = "value_constand", log_scale = FALSE)),
-    tar_target(fig_pair_prot, plot_replicate_pairs(phospho, condition, what = "value_prot", log_scale = TRUE))
+    values = NORM_COND,
+    names = NAME,
+    tar_target(fig_pair_med, plot_replicate_pairs(phospho, CONDITION, WHAT, log_scale = LOG))
   )
-  
+
   shiny <- list(
-    tar_target(shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de, bm_genes, bm_go, reactome, kegg)),
+    tar_target(shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de_median, bm_genes, bm_go, reactome, kegg)),
     tar_target(sav_shiny_de, write_rds(shiny_de, "shiny/data_de.rds", compress = "xz"))
   )
   
   tables <- list(
-    tar_target(sav_de, phospho_de %>% mutate_if(is.numeric, ~signif(.x, 4)) %>% write_tsv("tab/phospho_de.tsv"))
+    tar_target(sav_de, phospho_de_median %>% mutate_if(is.numeric, ~signif(.x, 4)) %>% write_tsv("tab/phospho_de.tsv"))
   )
   
   c(
     biomart,
     read_data,
-    pho_vs_pro,
-    de,
+    proteins,
+    map_normalisations,
     #fgsea,
     stats,
     figures,
-    figures_pairs
-    #shiny,
-    #tables
+    figures_pairs,
+    shiny,
+    tables
   )
   
 }

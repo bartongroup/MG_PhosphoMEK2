@@ -274,7 +274,7 @@ plot_phospho_per_peptide <- function(pep, pho) {
     filter(n_good == n_tot) %>% 
     pull(id)
   
-  pep$info %>% 
+  g <- pep$info %>% 
     select(id, phospho_ids) %>% 
     separate_rows(phospho_ids, sep=";") %>% 
     filter(phospho_ids %in% pho_quant) %>% 
@@ -289,6 +289,7 @@ plot_phospho_per_peptide <- function(pep, pho) {
     scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
     scale_x_continuous(breaks = 1:30) +
     labs(x="Number of phosphosites", y="Peptide count")
+  plot_grid(g)
 }
 
 
@@ -345,7 +346,7 @@ plot_phospho_orders <- function(pr, rep=1) {
 
 # A look at normalisation to protein
 plot_phospho_norm <- function(pho, pro, pho_id) {
-  pho$dat %>% 
+  g <- pho$dat %>% 
     filter(id == pho_id) %>% 
     left_join(pho$phospho2prot, by = "id") %>% 
     left_join(pro$dat %>% select(protein_id = id, sample, prot = value), by = c("protein_id", "sample")) %>% 
@@ -367,6 +368,7 @@ plot_phospho_norm <- function(pho, pro, pho_id) {
     scale_colour_manual(values = okabe_ito_palette) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.03)), limits = c(0, NA)) +
     facet_wrap(~name, scales = "free_y", ncol=1)
+  plot_grid(g)
 }
 
 
