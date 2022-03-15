@@ -21,15 +21,11 @@ read_mq <- function(file, data_cols, measure_cols, id_cols, meta) {
     pivot_longer(-all_of(id_cols), names_to = "sample", values_to = "value") %>% 
     mutate(sample = factor(sample, levels = meta$sample)) %>% 
     mutate(value = na_if(value, 0))
-  tab <- raw[, meta$sample] %>% as.matrix()
-  rownames(tab) <- raw$id
-  tab[tab == 0] <- NA
   info <- raw %>% select(-all_of(meta$sample))
   
   set <- list(
     info = info,
     dat = dat,
-    tab = tab,
     metadata = meta
   )
   
@@ -47,16 +43,6 @@ read_phospho_reporters <- function(file) {
     pivot_longer(-id, names_to = "column_name") %>% 
     left_join(rep_cols, by="column_name")
 }
-
-
-select_full_rows <- function(tab) {
-  tab[rowSums(is.na(tab)) == 0, ]
-}
-
-drop_empty_rows <- function(tab) {
-  tab[rowSums(!is.na(tab)) > 0, ]
-}
-
 
 get_peptide_ids <- function(pho, phospho_ids) {
   pho$info %>% 
@@ -76,7 +62,7 @@ get_phospho_ids <- function(pep, peptide_ids) {
     unique()
 }
 
-
+# At least one non-missing value in at least one condition
 get_expressed_ids <- function(set) {
   set$dat %>% 
     left_join(set$metadata, by="sample") %>% 
@@ -196,51 +182,60 @@ RAS <- function(K, max.iter=50, eps=1e-5) {
 
 
 normalise_constand <- function(set) {
-  tab_norm <- RAS(set$tab)
+  tab <- dat2mat(set$dat, "value")
+  tab_norm <- RAS(tab)
   dn <- tab_norm %>% 
     as_tibble(rownames = "id") %>% 
     pivot_longer(-id, names_to = "sample", values_to = "value_constand")
   set$dat <- set$dat %>% 
     left_join(dn, by = c("id", "sample"))
-  set$tab_constand <- tab_norm
   set
 }
 
 normalise_to_median <- function(set) {
-  normf <- apply(set$tab, 2, function(x) median(x, na.rm=TRUE))
-  normf <- normf / mean(normf)
-  tab_norm <- t(t(set$tab) / normf)
-  dn <- tab_norm %>% 
-    as_tibble(rownames = "id") %>% 
-    pivot_longer(-id, names_to = "sample", values_to = "value_med")
+  med <- set$dat %>% 
+    group_by(sample) %>% 
+    summarise(M = median(value, na.rm = TRUE)) %>% 
+    mutate(M = M / mean(M))
   set$dat <- set$dat %>% 
-    left_join(dn, by = c("id", "sample"))
-  set$tab_med <- tab_norm
+    left_join(med, by = "sample") %>% 
+    mutate(value_med = value / M) %>% 
+    select(-M)
   set
 }
 
 
 normalise_to_proteins <- function(pho, pro) {
   # here we ignore a handful of phospho sites that a linked to multiple protein groups
-  p2p <- pho$info %>% 
+  pho$phospho2prot <- pho$info %>% 
     select(id, protein_id = protein_ids) %>% 
     filter(!str_detect(protein_id, ";"))
-  dat <- pho$dat %>% 
-    left_join(p2p, by="id") %>% 
-    left_join(select(pro$dat, protein_id = id, sample, prot = value, prot_norm = value_med), by=c("protein_id", "sample")) %>% 
-    mutate(ratio_norm = value_med / prot_norm)
-  tab_prot <- dat %>% 
-    pivot_wider(id_cols = id, names_from = sample, values_from = ratio_norm) %>% 
+  # mean protein abundance across conditions
+  mp <- pro$dat %>% 
+    drop_na() %>% 
+    left_join(pro$metadata, by = "sample") %>% 
+    group_by(id, condition) %>% 
+    summarise(prot_mean = mean(value)) %>% 
+    rename(protein_id = id)
+  pho$dat <- pho$dat %>% 
+    left_join(pho$phospho2prot, by="id") %>% 
+    left_join(select(pho$metadata, sample, condition), by = "sample") %>% 
+    left_join(mp, by=c("protein_id", "condition")) %>% 
+    left_join(select(pro$dat, protein_id = id, sample, prot = value), by = c("protein_id", "sample")) %>% 
+    mutate(
+      value_prot = value / prot,
+      value_prot_mean = value / prot_mean
+    ) %>% 
+    select(-c(protein_id, condition, prot, prot_mean))
+  pho
+}
+
+
+dat2mat <- function(d, what) {
+  d %>% 
+    select(id, sample, val = !!what) %>% 
+    drop_na() %>% 
+    pivot_wider(id_cols = id, names_from = sample, values_from = val) %>% 
     column_to_rownames("id") %>% 
     as.matrix()
-  list(
-    info = pho$info,
-    phospho2prot = p2p,
-    dat = dat,
-    tab = pho$tab,
-    tab_med = pho$tab_med,
-    tab_constand = pho$tab_constand,
-    tab_prot = tab_prot,
-    metadata = pho$metadata
-  )
 }

@@ -8,3 +8,7 @@ staging/
 .Rhistory
 .RData
 .Ruserdata
+_targets/
+renv/
+mq_data/
+cache/

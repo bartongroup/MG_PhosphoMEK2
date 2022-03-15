@@ -1,18 +1,20 @@
-prepare_phospho_counts <- function(pho, tab = "tab_med", loc_prob_limit=0.95) {
+prepare_phospho_counts <- function(pho, loc_prob_limit=0.95) {
   sel <- pho$info %>% 
     filter(localization_prob > loc_prob_limit) %>% 
     pull(id)
-  pho[[tab]][sel, ] %>%
-    drop_empty_rows() 
+  pho$dat %>%
+    filter(id %in% sel)
 }
 
 
-limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=NULL, tab = "tab_med", log_scale=TRUE, loc_prob_limit=0.95) {
+limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=NULL, what = "value_med", log_scale=TRUE, loc_prob_limit=0.95) {
   if(!is.null(set$info$localization_prob)) {
-    X <- prepare_phospho_counts(set, tab, loc_prob_limit)
+    d <- prepare_phospho_counts(set, loc_prob_limit)
   } else {
-    X <- set[[tab]] %>% drop_empty_rows() 
+    d <- set$dat
   }
+  
+  X <- dat2mat(d, what)
   
   if(log_scale) X <- log2(X)
   meta <- set$metadata

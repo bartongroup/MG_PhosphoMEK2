@@ -95,17 +95,20 @@ plot_clustering <- function(set, text.size=10) {
 }
 
 plot_volcano <- function(res, fc="logFC", p="PValue", fdr="FDR", groupvar="contrast",
-                         alpha=0.05, logfc.limit=0, point.size=0.5, point.alpha=0.5) {
+                         fdr.limit=0.05, logfc.limit=0, point.size=0.5, point.alpha=0.5) {
   res %>%
     mutate(
       x = get(fc),
       y = get(p),
-      sig = get(fdr) < alpha & abs(get(fc)) > logfc.limit
+      sig = get(fdr) < fdr.limit & abs(get(fc)) > logfc.limit
     ) %>%
     ggplot(aes(x=x, y=-log10(y), colour=sig)) +
-    theme_linedraw() +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_vline(xintercept = 0, colour = "grey60") +
     geom_point(size=point.size, alpha=point.alpha) +
     scale_colour_manual(values=c("grey70", "black")) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
     facet_grid(as.formula(glue::glue(". ~ {groupvar}"))) +
     theme(legend.position = "none") +
     labs(x=fc, y=glue::glue("-log10({p})"))
@@ -113,10 +116,10 @@ plot_volcano <- function(res, fc="logFC", p="PValue", fdr="FDR", groupvar="contr
 
 
 plot_ma <- function(res, fc="logFC", sm="AveExpr", fdr = "FDR", groupvar = "contrast",
-                    alpha=0.05, logfc.limit=0, with.labels=FALSE, label.size=3, id="gene_name",
+                    fdr.limit=0.05, logfc.limit=0, with.labels=FALSE, label.size=3, id="gene_name",
                     point.size=0.5, point.alpha=0.5, sel_genes=NULL) {
   res <- res %>%
-    mutate(sig = get(fdr) < alpha & abs(get(fc)) > logfc.limit)
+    mutate(sig = get(fdr) < fdr.limit & abs(get(fc)) > logfc.limit)
   g <- ggplot(res, aes_string(x=sm, y=fc, colour="sig")) +
     theme_linedraw() +
     geom_point(size=point.size, alpha=point.alpha) +
@@ -133,9 +136,9 @@ plot_ma <- function(res, fc="logFC", sm="AveExpr", fdr = "FDR", groupvar = "cont
 }
 
 
-plot_up_down <- function(res, sig.limit=0.05, fc.limit=1, groupvar = "contrast") {
+plot_up_down <- function(res, fdr.limit=0.05, logfc.limit=1, groupvar = "contrast") {
   res %>%
-    filter(FDR < sig.limit & abs(logFC) > fc.limit) %>%
+    filter(FDR < fdr.limit & abs(logFC) > logfc.limit) %>%
     mutate(direction = if_else(logFC > 0, "up", "down")) %>%
     mutate(gr = !!sym(groupvar)) %>% 
     group_by(gr, direction) %>%
@@ -337,4 +340,68 @@ plot_phospho_orders <- function(pr, rep=1) {
     pivot_wider(id_cols = c(id, reporter), names_from = order, values_from = value) %>% 
     select(-c(id, reporter)) %>% 
   ggpairs()
+}
+
+
+# A look at normalisation to protein
+plot_phospho_norm <- function(pho, pro, pho_id) {
+  pho$dat %>% 
+    filter(id == pho_id) %>% 
+    left_join(pho$phospho2prot, by = "id") %>% 
+    left_join(pro$dat %>% select(protein_id = id, sample, prot = value), by = c("protein_id", "sample")) %>% 
+    select(-c(id, value_constand, protein_id)) %>% 
+    rename(
+      `Protein raw` = prot,
+      `Phospho raw` = value,
+      `Phospho to median` = value_med,
+      `Phospho to protein` = value_prot,
+      `Phospho to mean protein` = value_prot_mean,
+    ) %>% 
+    pivot_longer(-sample) %>% 
+    left_join(pho$metadata, by = "sample") %>% 
+  ggplot(aes(x = sample, y = value, colour = condition)) +
+    theme_bw() + 
+    theme(panel.grid = element_blank()) +
+    geom_segment(aes(xend = sample, yend = 0), colour = "grey") +
+    geom_point() +
+    scale_colour_manual(values = okabe_ito_palette) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03)), limits = c(0, NA)) +
+    facet_wrap(~name, scales = "free_y", ncol=1)
+}
+
+
+plot_pho_vs_prot <- function(pho, pro, pho_ids) {
+  pho$dat %>%
+    filter(id %in% pho_ids) %>% 
+    left_join(pho$metadata, by = "sample") %>% 
+    left_join(pho$phospho2prot, by = "id") %>% 
+    left_join(pro$dat %>% select(protein_id = id, sample, prot = value_med), by = c("protein_id", "sample")) %>% 
+    mutate(prot = replace_na(prot, 1)) %>% 
+  ggplot(aes(x = log10(value_med), y = log10(prot), fill = condition)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_point(shape = 21, size = 2, colour = "grey20") +
+    scale_fill_manual(values = c("#FFFFFF", "#000000")) +
+    labs(x = expression(log[10]~phosphosite), y = expression(log[10]~protein)) +
+    facet_wrap(~id, scales = "free")
+}
+
+plot_pho_prot_cor <- function(pho, pro, nrow=2) {
+  d <- pho$dat %>%
+    drop_na() %>% 
+    left_join(pho$phospho2prot, by = "id") %>% 
+    full_join(select(pro$dat, id, sample, prot = value), by = c("sample", "protein_id" = "id")) %>% 
+    mutate(pho = log10(value), prot = log10(prot)) %>% 
+    select(id, sample, pho, prot)
+  dc <- d %>% 
+    group_by(sample) %>% 
+    summarise(cor = cor(pho, prot))
+  g <- d %>% 
+    ggplot(aes(x = prot, y = pho)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_point(size = 0.05) +
+    facet_wrap(~ sample, nrow=nrow) +
+    labs(x = expression(log[10]~protein), y = expression(log[10]~phosphosite))
+  plot_grid(g)
 }

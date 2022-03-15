@@ -118,3 +118,6 @@ SAMPLE_REPORTER <- tibble(
 )
 
 CONDITIONS <- tibble(condition = c("DMSO", "MEKi"))
+
+FDR_LIMIT <- 0.05
+LOGFC_LIMIT <- 0

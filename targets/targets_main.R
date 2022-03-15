@@ -18,24 +18,32 @@ targets_main <- function() {
     tar_target(phospho_rep, read_phospho_reporters(PHOSPHO_FILE))
   )
   
+  pho_vs_pro <- list(
+    tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins))
+  )
+  
   stats <- list(
     tar_target(phospho_rep_names, phospho_rep %>% pull(column_name) %>% unique()),
     #tar_target(quants, q_numbers(phospho, peptides, proteins)),
     tar_target(detected_genes, get_detected_genes(phospho)),
     #tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
-    tar_target(n_good_phospho, prepare_phospho_counts(phospho, tab = "tab_med", loc_prob_limit = 0.95) %>% nrow())
+    tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length())
   )
   
   de <- list(
-    tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, tab = "tab_med", log_scale = TRUE, loc_prob_limit=0.95)),
-    tar_target(phospho_n_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, tab = "tab_prot", log_scale = TRUE, loc_prob_limit=0.95)),
-    #tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, tab = "tab_med", log_scale = TRUE)),
-    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, tab = "tab_med", log_scale = TRUE)),
+    tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = "value_med", log_scale = TRUE, loc_prob_limit=0.95)),
+    tar_target(phospho_n_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = "value_prot", log_scale = TRUE, loc_prob_limit=0.95)),
+    #tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
+    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
     
-    tar_target(fig_volcano, plot_volcano(phospho_de, logfc.limit = 1)),
-    tar_target(fig_ma, plot_ma(phospho_de, logfc.limit = 1)),
-    tar_target(fig_up_down, plot_up_down(phospho_de, fc.limit=1)),
-    tar_target(upset_fc1, de_list(phospho_de, "contrast", logfc.limit = 1))
+    tar_target(fig_volcano, plot_volcano(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
+    tar_target(fig_volcano_n, plot_volcano(phospho_n_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
+    
+    tar_target(fig_ma, plot_ma(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
+    tar_target(fig_up_down, plot_up_down(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
+    
+    tar_target(de_pho, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id)),
+    tar_target(de_pho_n, phospho_n_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id))
   )
   
   fgsea <- list(
@@ -50,13 +58,16 @@ targets_main <- function() {
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
     tar_target(fig_sample_dist_med, plot_sample_distirbutions(phospho, "value_med", log_scale = TRUE)),
-    tar_target(fig_sample_dist_constand, plot_sample_distirbutions(phospho, "value_constand", log_scale = FALSE))
+    tar_target(fig_sample_dist_constand, plot_sample_distirbutions(phospho, "value_constand", log_scale = FALSE)),
+    
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "3130"))
   )
   
   figures_pairs <- tar_map(
     values = CONDITIONS,
     tar_target(fig_pair_med, plot_replicate_pairs(phospho, condition, what = "value_med", log_scale = TRUE)),
-    tar_target(fig_pair_constand, plot_replicate_pairs(phospho, condition, what = "value_constand", log_scale = FALSE))
+    tar_target(fig_pair_constand, plot_replicate_pairs(phospho, condition, what = "value_constand", log_scale = FALSE)),
+    tar_target(fig_pair_prot, plot_replicate_pairs(phospho, condition, what = "value_prot", log_scale = TRUE))
   )
   
   shiny <- list(
@@ -71,6 +82,7 @@ targets_main <- function() {
   c(
     biomart,
     read_data,
+    pho_vs_pro,
     de,
     #fgsea,
     stats,
