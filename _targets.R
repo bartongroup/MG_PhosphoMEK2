@@ -3,10 +3,11 @@ library(tarchetypes)
 
 #future::plan(future.callr::callr)
 
-packages <- c("biomaRt", "viridis", "cowplot", "ggridges", "ggbeeswarm", "GGally", "ggrepel", "uwot", "limma", "tidyverse")
+packages <- c("biomaRt", "STRINGdb", "viridis", "cowplot", "ggridges", "ggbeeswarm", "GGally", "ggrepel", "uwot", "limma", "tidyverse")
 tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
 if(!dir.exists("tab")) dir.create("tab")
+if(!dir.exists("fig")) dir.create("fig")
 
 select = dplyr::select
 

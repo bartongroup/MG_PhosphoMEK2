@@ -1,6 +1,11 @@
 # Each column specification needs to contain a column "protein"
 # This is used to remove rev and con
 
+TAXONOMY_ID <- 9606
+KEGG_SPECIES <- "hsa"
+ENSEMBL_DATASET <- "hsapiens_gene_ensembl"
+ENSEMBL_VERSION <- "105"
+
 REPORTERS <- 1:10
 
 EVIDENCE_FILE <- "mq_data/evidence.txt"
@@ -41,7 +46,7 @@ PROTEINS_ID_COLUMNS <- c("id")
 
 PROTEINS_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
-  column_name = glue::glue("Reporter intensity corrected {reporter} Phospho") |> as.character()
+  column_name = glue::glue("Reporter intensity corrected {reporter} Total") |> as.character()
 )
 
 KEEP_PROTEINS_COLUMNS <- c("peptide_ids", "phospho_ids", "protein", "gene_name")

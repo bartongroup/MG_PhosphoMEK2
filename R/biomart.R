@@ -77,7 +77,8 @@ go_fetch_go_descriptions <- function(obo_file = "go.obo") {
 bm_fetch_go <- function(mart, gene_names, slim=FALSE) {
   gene2go <- bm_fetch_go_genes(mart, gene_names, slim)
   # using geneontology.org as Ensembl has term descriptions missing
-  goterms <- go_fetch_go_descriptions()
+  #goterms <- go_fetch_go_descriptions()
+  goterms <- bm_fetch_go_descriptions(mart)
   terms <- gene2go$term_id %>% unique()
   go2gene <- map(terms, function(trm) gene2go[gene2go$term_id == trm, ]$gene_name) %>% 
     set_names(terms)

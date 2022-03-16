@@ -1,12 +1,14 @@
 targets_main <- function() {
   
   biomart <- list(
-    tar_target(mart, useEnsembl(biomart="ensembl", dataset="mmusculus_gene_ensembl", version="105")),
+    tar_target(mart, useEnsembl(biomart="ensembl", dataset=ENSEMBL_DATASET, version=ENSEMBL_VERSION)),
     tar_target(bm_genes, biomart_fetch_genes(mart)),
-    tar_target(bm_go, bm_fetch_go(mart, detected_genes)),
-    tar_target(bm_go_slim, bm_fetch_go(mart, detected_genes, slim=TRUE)),
-    tar_target(reactome, fetch_reactome(mart, detected_genes)),
-    tar_target(kegg, get_kegg(species = "mmu", bm_genes = bm_genes))
+    tar_target(all_terms, list(
+      go = bm_fetch_go(mart, detected_genes),
+      gs = bm_fetch_go(mart, detected_genes, slim=TRUE),
+      re = fetch_reactome(mart, detected_genes),
+      kg = get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes))
+    )
   )
   
   read_data <- list(
@@ -21,14 +23,15 @@ targets_main <- function() {
   stats <- list(
     tar_target(phospho_rep_names, phospho_rep %>% pull(column_name) %>% unique()),
     tar_target(quants, q_numbers(phospho, peptides, proteins)),
-    tar_target(detected_genes, get_detected_genes(phospho)),
     tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
     tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length())
   )
   
   proteins <- list(
     tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
-    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE))
+    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
+    
+    tar_target(fig_volcano_protein, plot_volcano(protein_de))
   )
   
   map_normalisations <- tar_map(
@@ -42,22 +45,27 @@ targets_main <- function() {
     tar_target(fig_up_down, plot_up_down(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG)),
 
-    tar_target(de_sites, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id))
+    tar_target(de_sites, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id)),
+    tar_target(fig_pho_vs_pro, plot_pho_vs_prot(phospho, proteins, de_sites))
   )
   
-  fgsea <- list(
-    tar_target(fg_go, fgsea_cache(phospho_de, bm_go, "cache/fgsea_go.rds")),
-    tar_target(fg_gs, fgsea_cache(phospho_de, bm_go_slim, "cache/fgsea_gs.rds")),
-    tar_target(fg_re, fgsea_cache(phospho_de, reactome, "cache/fgsea_re.rds")),
-    tar_target(fg_kg, fgsea_cache(phospho_de, kegg, "cache/fgsea_kg.rds"))
+  selections <- list(
+    tar_target(detected_genes, get_detected_genes(phospho)),
+    tar_target(genes_de, make_de_genes(phospho_de_median, fdr_limit=FDR_LIMIT, fc_limit=LOGFC_LIMIT))
   )
   
- 
+  stringdb <- tar_map(
+    values = tibble::tibble(direction = c("up", "down")),
+    names = direction,
+    tar_target(stringr_map, run_stringdb(genes_de[[direction]]$protein, species=TAXONOMY_ID)),
+    tar_target(png_strigr, plot_stringdb_clusters(stringr_map, paste0("fig/sdb_", direction, ".png")))
+  )
+  
   figures <- list(
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
-    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "3130")),
-    tar_target(fig_pho_per_pep,plot_phospho_per_peptide(peptides, phospho)),
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "23999")),
+    tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
     tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins))
   )
   
@@ -68,8 +76,7 @@ targets_main <- function() {
   )
 
   shiny <- list(
-    tar_target(shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de_median, bm_genes, bm_go, reactome, kegg)),
-    tar_target(sav_shiny_de, write_rds(shiny_de, "shiny/data_de.rds", compress = "xz"))
+    tar_target(sav_shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de_median, bm_genes, all_terms) %>% write_rds("shiny/data_de.rds", compress = "xz"))
   )
   
   tables <- list(
@@ -81,8 +88,9 @@ targets_main <- function() {
     read_data,
     proteins,
     map_normalisations,
-    #fgsea,
     stats,
+    selections,
+    stringdb,
     figures,
     figures_pairs,
     shiny,

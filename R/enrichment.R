@@ -178,6 +178,7 @@ make_term_list <- function(gene2term) {
 }
 
 fgsea_run <- function(trm, res, min.size=3) {
+  res <- res %>% filter(!is.na(value) & !is.na(gene_name))
   term_list <-  make_term_list(trm$gene2term %>% filter(gene_name %in% res$gene_name))
   ranks <-  set_names(res$value, res$gene_name)
   fgsea::fgsea(pathways=term_list, stats=ranks, nproc=6, minSize=min.size, eps=0) %>%
@@ -201,6 +202,16 @@ fgsea_cache <- function(d, terms, file, valvar="logFC", groupvar = "contrast") {
     write_rds(fg, file)
   }
   fg
+}
+
+fgsea_all_terms <- function(d, all_terms, valvar="logFC", groupvar = "contrast") {
+  nms <- names(all_terms)
+  map(nms, function(trm) {
+    cat(glue::glue("  Computing fgsea for {trm}\n\n"))
+    cache_file <- file.path("cache", glue::glue("fgsea_{trm}.rds"))
+    fgsea_cache(d, all_terms[[trm]], cache_file, valvar, groupvar)
+  }) %>% 
+    set_names(nms)
 }
 
 plot_fgsea_enrichment <- function(term, res, terms, value="logFC") {

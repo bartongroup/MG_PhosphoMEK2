@@ -76,3 +76,19 @@ de_list <- function(res, group_var, fdr="FDR", logfc="logFC", logfc.limit=0, fdr
     set_names(ks)
 }
 
+
+pull_proteins <- function(des) {
+  des %>% 
+    select(protein, gene_name) %>% 
+    distinct() %>% 
+    arrange(gene_name) %>% 
+    filter(!is.na(gene_name))
+}
+
+make_de_genes <- function(de, fdr_limit=0.05, fc_limit=1) {
+  list(
+    up = pull_proteins(de %>% filter(FDR < fdr_limit & logFC >= fc_limit)),
+    down = pull_proteins(de %>% filter(FDR < fdr_limit & logFC <= -fc_limit))
+  )
+}
+

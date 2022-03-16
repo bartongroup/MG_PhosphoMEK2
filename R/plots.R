@@ -360,14 +360,15 @@ plot_phospho_norm <- function(pho, pro, pho_id) {
     ) %>% 
     pivot_longer(-sample) %>% 
     left_join(pho$metadata, by = "sample") %>% 
-  ggplot(aes(x = sample, y = value, colour = condition)) +
+  ggplot(aes(x = condition, y = value, colour = condition)) +
     theme_bw() + 
     theme(panel.grid = element_blank()) +
-    geom_segment(aes(xend = sample, yend = 0), colour = "grey") +
-    geom_point() +
+    #geom_segment(aes(xend = condition, yend = 0), colour = "grey") +
+    geom_point(size=3) +
     scale_colour_manual(values = okabe_ito_palette) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.03)), limits = c(0, NA)) +
-    facet_wrap(~name, scales = "free_y", ncol=1)
+    #scale_y_continuous(expand = expansion(mult = c(0, 0.03)), limits = c(0, NA)) +
+    facet_wrap(~name, scales = "free_y", nrow=1) +
+    labs(x=NULL, y="Intensity or ratio")
   plot_grid(g)
 }
 
