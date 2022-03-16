@@ -12,3 +12,8 @@ _targets/
 renv/
 mq_data/
 cache/
+fig/
+string_db/
+tab/
+shiny/data*
+.DS_Store
