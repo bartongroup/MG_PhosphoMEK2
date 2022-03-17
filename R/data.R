@@ -9,13 +9,13 @@ make_metadata <- function(samples, conditions) {
     arrange(condition, replicate)
 }
 
-read_mq <- function(file, data_cols, measure_cols, id_cols, meta) {
+read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
   mr <- meta %>% 
     left_join(measure_cols, by="reporter")
   raw <- read_tsv(file, col_select = c(data_cols$raw_name, mr$column_name), show_col_types = FALSE) %>% 
     set_names(c(data_cols$name, mr$sample)) %>% 
     mutate(id = as.character(id)) %>% 
-    filter(!str_detect(protein, "^(CON_|REV_)")) # remove reverse and contaminants
+    filter(rlang::eval_tidy(rlang::parse_expr(filt)))
   dat <- raw %>% 
     select(all_of(id_cols), all_of(meta$sample)) %>%
     pivot_longer(-all_of(id_cols), names_to = "sample", values_to = "value") %>% 
@@ -62,17 +62,16 @@ get_phospho_ids <- function(pep, peptide_ids) {
     unique()
 }
 
-# At least one non-missing value in at least one condition
+# At least one non-missing value in all replicates in at least one condition
 get_expressed_ids <- function(set) {
   set$dat %>% 
     left_join(set$metadata, by="sample") %>% 
     group_by(id, condition) %>% 
-    summarise(n_good = sum(!is.na(value_med))) %>% 
+    summarise(n_tot = n(), n_good = length(na.omit(value))) %>% 
     ungroup() %>% 
     group_by(id) %>% 
-    summarise(good = sum(n_good) > 0) %>% 
-    arrange(as.numeric(id)) %>% 
-    filter(good) %>% 
+    summarise(n_good_conditions = sum(n_tot == n_good)) %>% 
+    filter(n_good_conditions > 0) %>% 
     pull(id)
 }
 
@@ -104,6 +103,30 @@ set_comparison <- function(pho, pep, pro) {
   )
 }
 
+# match all phosphosites vs all proteins, mark expressed as "good"
+pho_pro_match <- function(pho, pro) {
+  good_pho <- get_expressed_ids(pho)
+  good_pro <- get_expressed_ids(pro)
+  
+  pho2pro <- pho$info %>% 
+    select(phospho_id = id, protein_id = protein_ids) %>% 
+    separate_rows(protein_id, sep=";") %>% 
+    distinct()
+  
+  pro2pho <- pro$info %>% 
+    select(protein_id = id, phospho_id = phospho_ids) %>% 
+    separate_rows(phospho_id, sep=";") %>% 
+    distinct()
+  
+  p2p <- bind_rows(pho2pro, pro2pho) %>% distinct()
+
+  tb <- p2p %>% 
+    mutate(
+      good_pho = phospho_id %in% good_pho,
+      good_pro = protein_id %in% good_pro
+    )
+}
+
 
 get_detected_genes <- function(pho) {
   pho$dat %>% 
@@ -121,15 +144,8 @@ get_detected_genes <- function(pho) {
 # number of quantified features
 # quantified in all replicates in at least one condition
 n_quantified <- function(set) {
-  set$dat %>% 
-    left_join(set$metadata, by="sample") %>% 
-    group_by(id, condition) %>% 
-    summarise(n_tot = n(), n_good = length(na.omit(value))) %>% 
-    ungroup() %>% 
-    group_by(id) %>% 
-    summarise(n_good_conditions = sum(n_tot == n_good)) %>% 
-    filter(n_good_conditions > 0) %>% 
-    nrow()
+  get_expressed_ids(set) %>% 
+    length()
 }
 
 
@@ -238,4 +254,21 @@ dat2mat <- function(d, what) {
     pivot_wider(id_cols = id, names_from = sample, values_from = val) %>% 
     column_to_rownames("id") %>% 
     as.matrix()
+}
+
+# Protein per phosphosite statistics. How many proteins a phosphosite is matched
+# to? 
+protein_count <- function(tab_pho_pro) {
+  tab_pho_pro %>%
+    filter(good_pho) %>%  
+    group_by(good_pro, phospho_id, .drop=FALSE) %>%
+    summarise(n_prot = n()) %>%
+    ungroup() %>% 
+    group_by(good_pro, n_prot) %>%
+    summarise(count = n()) %>% 
+    arrange(good_pro, n_prot) %>% 
+    ungroup() %>% 
+    mutate(`Protein detected` = if_else(good_pro, "Yes", "No"), .before = good_pro) %>% 
+    select(-good_pro) %>% 
+    rename(`N matched proteins` = n_prot)
 }

@@ -17,3 +17,6 @@ string_db/
 tab/
 shiny/data*
 .DS_Store
+doc/analysis_cache
+doc/analysis_files
+doc/analysis.html

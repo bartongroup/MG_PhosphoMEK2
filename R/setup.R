@@ -39,7 +39,10 @@ PROTEINS_DATA_COLUMNS <- tibble::tribble(
   "protein", "Majority protein IDs", "c",
   "gene_name", "Gene names", "c",
   "protein_names", "Protein names", "c",
-  "sequence_length", "Sequence length", "n"
+  "sequence_length", "Sequence length", "n",
+  "n_razor_unique", "Razor + unique peptides", "n",
+  "reverse", "Reverse", "c",
+  "contaminant", "Potential contaminant", "c"
 )
 
 PROTEINS_ID_COLUMNS <- c("id")
@@ -51,7 +54,8 @@ PROTEINS_MEASURE_COLUMNS <- tibble::tibble(
 
 KEEP_PROTEINS_COLUMNS <- c("peptide_ids", "phospho_ids", "protein", "gene_name")
 
-
+# Using %in% is necessary when the alternative is NA
+PROTEINS_FILTER <- "n_razor_unique > 2 & !(reverse %in% '+') & !(contaminant %in% '+')"
 
 # peptides file
 
@@ -68,7 +72,9 @@ PEPTIDES_DATA_COLUMNS <- tibble::tribble(
   "gene_name", "Gene names", "c",
   "protein_names", "Protein names", "c",
   "start_position", "Start position", "n",
-  "end_position", "End position", "n"
+  "end_position", "End position", "n",
+  "reverse", "Reverse", "c",
+  "contaminant", "Potential contaminant", "c"
 )
 
 PEPTIDES_ID_COLUMNS <- c("id")
@@ -80,6 +86,7 @@ PEPTIDES_MEASURE_COLUMNS <- tibble::tibble(
 
 KEEP_PEPTIDES_COLUMNS <- c("phospho_ids", "protein", "gene_name")
 
+PEPTIDES_FILTER <- "!(reverse %in% '+') & !(contaminant %in% '+')"
 
 # phospho file
 
@@ -104,7 +111,9 @@ PHOSPHO_DATA_COLUMNS <- tibble::tribble(
   "phospho_probabilities", "Phospho (STY) Probabilities", "c",
   "position_in_peptide", "Position in peptide", "n",
   "position", "Position", "n",
-  "charge", "Charge", "n"
+  "charge", "Charge", "n",
+  "reverse", "Reverse", "c",
+  "contaminant", "Potential contaminant", "c"
 )
 
 PHOSPHO_ID_COLUMNS <- c("id")
@@ -115,6 +124,9 @@ PHOSPHO_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
   column_name = glue::glue("Reporter intensity corrected {reporter}___1") |> as.character()
 )
+
+PHOSPHO_FILTER <- "localization_prob > 0.95 & !(reverse %in% '+') & !(contaminant %in% '+')"
+
 
 
 SAMPLE_REPORTER <- tibble::tibble(

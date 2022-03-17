@@ -1,0 +1,230 @@
+---
+title: "Phosphoproteomics of ERK1/2 regulation of neural differentiation (second analysis)"
+author: "Marek Gierlinski"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    theme:
+      bootswatch: journal
+      primary: "#2fa4e7"
+---
+
+```{css css_options, echo=FALSE}
+pre code, pre, code {
+  white-space: pre !important;
+  overflow-x: scroll_box() ! important; 
+  word-break: keep-all !important;
+  word-wrap: initial !important;
+}
+```
+
+```{r options, echo=FALSE}
+knitr::opts_chunk$set(
+  warning = FALSE,
+  message = FALSE,
+  echo = FALSE,
+  cache = TRUE,
+  autodep = TRUE
+)
+options(
+  width = 100,
+  knitr.table.format = "html"
+)
+```
+
+```{r libraries, cache=FALSE}
+library(targets)
+library(tidyverse)
+library(flextable)
+library(DT)
+```
+
+```{r functions}
+myDT <- function(d) {
+  datatable(d, class="table-condensed table-striped table-bordered", style="bootstrap") %>% 
+    formatStyle(columns = colnames(d), fontSize = '90%')
+}
+N <- function(n) prettyNum(n, big.mark = ",")
+```
+
+Collaborators: Elisenda Raga Gil, Frederic Lamoliatte, Kate Storey
+
+#  {.tabset}
+
+## Proposal
+
+The aim of this project is to uncover the molecular mechanisms by which ERK1/2 signalling regulates chromatin organisation at neural differentiation genes in hESC-derived NMPs.
+
+To screen for changes in protein phosphorylation following loss of ERK1/2 signalling, we conducted a phosphoproteomic survey on hNMP-like cells following exposure to PD0325901 (a selective MEK1/2 inhibitor) for 3hrs, compared with vehicle (DMSO) only control, using mass-spectrometry (MS) based analysis.
+
+We collected a total of five biological replicates (NMPs generated in independent hESCs differentiations on different experimental days). Each replicate has a MEKi/DMSO and a DMSO vehicle only control. This total of 10 samples was then subject to TMT-labelling and used MS-based phosphoproteomic analysis (Figure 4a). Preliminary data analysis (using non-adjusted p-values, the adjusted p-values were not significant, but this may reflect the conservative nature of Bonferroni corrections for multiple testing, we are also unaware of exactly which of these corrections were used in the analysis provided) - revealed changes in phosphorylation of a chromatin remodelling protein SMARCD1A (subunit of the BAF complex) in the top five phosphopeptides identified list (Figure 4b). The BAF complex has been shown to oppose actions of Polycomb complexes (Kadoch et al. 2017) and this is therefore of interest to us as it may therefore provide a link to understanding the molecular mechanism(s) underlying induction of neural genes as FGF/ERK signalling declines.
+
+We would like to explore this dataset with the DAG in the following ways:
+
+ - Re-analyse the data to determine how the p-values and adjusted p-values were generated. It seems likely that a small number of changes are taking place during this short exposure to the MEK inhibitor. We wonder whether an appropriate form of multiple testing correction has been used, which is not so conservative as to mask underlying biology in this context?
+ - Explore other ways of analysing the data. Is there an outlying replicate(s) that masks significant changes?
+ - Identify datasets for further mining, such as analysis for GO terms, so we can generate predictions of changes in cellular processes triggered by acute MEK inhibition.
+ - In the longer term, when the total proteome data for these replicates is available, we would like to normalise against this to ensure that changes in phosphorylation are not attributable to changes in protein abundance.
+
+## Data
+
+### MaxQuant
+
+In contrast to the [first analysis](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek/doc/analysis.html), raw proteomics files were analysed with MaxQuant. From the MaxQuant output we use `Phospho (STY)Sites.txt`, `peptides.txt` and `proteinGroups.txt` files. They are interlinked via integer IDs: phosphosite file contains peptide IDs and protein IDs for each site, peptides file contains phosphosite IDs and protein IDs for each peptide and, as you can guess, protein file contains phosphosite IDs and peptide IDs for each protein (group). This allows for efficient merging and analysing of these data.
+
+Modifications in the phosphosite files are provided explicitly, with the amino acid, position in the peptide and position in the protein, per site. This does not require parsing of complicated strings, as in *Proteome Discoverer* data.
+
+### Filtering
+
+We filter all data by removing reverse and potential contaminants. Also we filter `Razor + unique peptides > 2` for proteins and `Localization prob > 0.95` for phospho sites.
+
+We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition.
+
+```{r detect}
+tar_load(quants)
+flextable(quants)
+```
+
+## Experiment
+
+Our experimental setup is simple. We have two conditions in five replicates each, distributed across ten TMT reporters.
+
+
+```{r meta}
+tar_read(metadata) %>% flextable()
+```
+
+## Overview
+
+### Abundance distribution
+
+The plot shows distribution of normalised phosphosite abundance, normalised to median:
+
+```{r fig_pep_abu_dist, fig.width=8, fig.height=4}
+tar_read(fig_sample_dist_median)
+```
+
+### Clustering
+
+```{r fig_pep_clustering, fig.width=4, fig.height=3}
+tar_read(fig_pho_clustering_median)
+```
+
+### Replicate comparison
+
+Here is pairwise comparison of all replicates within each condition.
+
+```{r pep_rep_comp, fig.width=8, fig.height=8}
+tar_read(fig_pairs_median_DMSO)
+tar_read(fig_pairs_median_MEKi)
+```
+
+### Proteins vs phosphosites
+
+```{r pro_vs_pho_all, fig.width=10, fig.height=8}
+tar_read(fig_pho_pro_cor)
+```
+
+## Normalisation
+
+A change in phospho site abundance can be caused be differential phosphorylation, but it can also result from a change in protein abundance. We can normalise phospho sites to the total proteome to avoid such false detections. There are, however, several issues with this approach.
+
+### Some phospho sites match multiple or no proteins
+
+Some phospho sites do not match detected proteins. They a linked to a protein or proteins, but the protein is not detected in the total proteome. These cannot be used for downstream analysis. Other phospho sites match multiple detected proteins and it is not clear which of them should be used for normalisation. Here are the numbers:
+
+```{r prot_count}
+tar_load(tabs_prot_count)
+n_no_exp <- tabs_prot_count %>% 
+  filter(`Protein detected` == "No") %>% 
+  summarise(n = sum(count)) %>% 
+  pull(n)
+n_multi <- tabs_prot_count %>% 
+  filter(`N matched proteins` > 1) %>% 
+  summarise(n = sum(count)) %>% 
+  pull(n)
+n_bad <-  tabs_prot_count %>% 
+  filter(`Protein detected` == "No" | `N matched proteins` > 1) %>% 
+  summarise(n = sum(count)) %>% 
+  pull(n)
+n_tot = quants %>% filter(set == "Phospho") %>% pull(n)
+
+tabs_prot_count %>% 
+  flextable() %>% 
+  merge_v(j = "Protein detected") %>% 
+  theme_box() %>% 
+  autofit()
+```
+
+There are `r N(n_no_exp)` phospho sites with no detected protein matched, there are `r N(n_multi)` phospho sites matching more than one detected protein. In total, there are `r N(n_bad)` phospho sites that cannot be normalised to a protein. This is `r sprintf("%4.1f%%", 100 * n_bad / n_tot)` of all sites.
+
+### Proteins are noisy
+
+Alas, protein abundances exhibit variability, sometimes quite large, so normalising to protein increases variance and noise in phospho sites, reducing sensitivity (as we can see in differential abundance - there are fewer DE sites in protein normalisation than in median normalisation). One way of moderating the variance is to use the mean across all replicates, for each protein and condition as a normalising base. This doesn't help either, there are quite a few highly variable proteins where the mean changes a lot between conditions. They create false change in phospho sites, as seen in this example:
+
+```{r prot_norm_problem, fig.width=10, fig.height=3}
+tar_read(fig_prot_norm_problem)
+```
+
+### Proteins do not change between conditions
+
+We performed differential abundance on proteins (intensities normalised to the median). No significant proteins were found.
+
+```{r prot_volcano, fig.width=4, fig.height=4}
+tar_read(fig_volcano_prot)
+```
+
+We decide not to use total proteome for normalisation, instead we normalise phospho sites to the median across each sample.
+
+## Differential abundance
+
+### Description
+
+#### From limma R vignette
+
+For differential expression we use `limma`. It used an empirical Bayes method to squeeze the peptide-wise residual variances towards a common value (or towards a global trend) (Smyth, 2004; Phipson et al, 2016). The degrees of freedom for the individual variances are increased to reflect the extra information gained from the empirical Bayes moderation, resulting in increased statistical power to detect differential expression.
+
+For more information see [Ritchie et al. 2015](https://academic.oup.com/nar/article/43/7/e47/2414268).
+
+#### In simpler words
+
+`limma` uses a t-test, which is moderated by borrowing data across all peptides. A global variance model is built and moderation squeezes variances towards this global trend. Extreme variances (either large or small) become less extreme, which makes the test more robust to random outliers.
+
+### Results
+
+[Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek/tab/de_peptides.tsv)
+
+```{r fig_pep_volcano, fig.width=4, fig.height=4}
+tar_read(fig_volcano_median)
+tar_read(fig_ma_median)
+```
+
+```{r pep_de}
+d <- tar_read(tab_de_median)
+d %>% 
+  DT::datatable(rownames = FALSE) %>% 
+  DT::formatStyle(columns = colnames(d), fontSize = '80%')
+```
+<br>
+
+Here is a visual overview of significant sites. The figure shows protein abundance vs. phospho site abundance. Where protein data are not available, it is replaced with zero. We see that quite a few sites are linked to proteins with no detection. If we used normalisation to the total proteome, these sites would be missing.
+
+```{r prot_vs_pho_de, fig.width=12, fig.height=14}
+tar_read(fig_pho_vs_pro_median) 
+```
+
+Heatmap (hierarchical clustering of rows and columns) of significant sites.
+
+```{r de_heatmap, fig.width=8, fig.height=10}
+tar_read(fig_de_heatmap)
+```
+
+## Resources
+
+- [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/pep/)
+
+## Session info
+
+```{r session_info}
+sessionInfo()
+```

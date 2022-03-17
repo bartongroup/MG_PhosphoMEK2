@@ -13,9 +13,9 @@ targets_main <- function() {
   
   read_data <- list(
     tar_target(metadata, make_metadata(SAMPLE_REPORTER, CONDITIONS$CONDITION)),
-    tar_target(proteins, read_mq(PROTEINS_FILE, PROTEINS_DATA_COLUMNS, PROTEINS_MEASURE_COLUMNS, PROTEINS_ID_COLUMNS, metadata)),
-    tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, metadata)),
-    tar_target(phospho, read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, metadata) %>% 
+    tar_target(proteins, read_mq(PROTEINS_FILE, PROTEINS_DATA_COLUMNS, PROTEINS_MEASURE_COLUMNS, PROTEINS_ID_COLUMNS, PROTEINS_FILTER, metadata)),
+    tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, PEPTIDES_FILTER,metadata)),
+    tar_target(phospho, read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, PHOSPHO_FILTER, metadata) %>% 
       normalise_to_proteins(proteins)),
     tar_target(phospho_rep, read_phospho_reporters(PHOSPHO_FILE))
   )
@@ -30,8 +30,10 @@ targets_main <- function() {
   proteins <- list(
     tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
     tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
+    tar_target(fig_volcano_prot, plot_volcano(protein_de)),
     
-    tar_target(fig_volcano_protein, plot_volcano(protein_de))
+    tar_target(tab_pho_pro, pho_pro_match(phospho, proteins)),
+    tar_target(tabs_prot_count, protein_count(tab_pho_pro))
   )
   
   map_normalisations <- tar_map(
@@ -39,19 +41,21 @@ targets_main <- function() {
     names = NAME,
   
     tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = WHAT, log_scale = LOG, loc_prob_limit=0.95)),
-    
     tar_target(fig_volcano, plot_volcano(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_ma, plot_ma(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_up_down, plot_up_down(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
-    tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG)),
-
+    tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG, ncol=5)),
+    tar_target(fig_pho_distmat, plot_distance_matrix(phospho, WHAT)),
+    tar_target(fig_pho_clustering, plot_clustering(phospho, WHAT)),
+    
     tar_target(de_sites, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id)),
-    tar_target(fig_pho_vs_pro, plot_pho_vs_prot(phospho, proteins, de_sites))
+    tar_target(fig_pho_vs_pro, plot_pho_vs_prot(phospho, proteins, de_sites)),
+    tar_target(tab_de, make_de_table(phospho_de, phospho$info, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT))
   )
   
   selections <- list(
     tar_target(detected_genes, get_detected_genes(phospho)),
-    tar_target(genes_de, make_de_genes(phospho_de_median, fdr_limit=FDR_LIMIT, fc_limit=LOGFC_LIMIT))
+    tar_target(genes_de, make_de_genes(phospho_de_median, fdr.limit=FDR_LIMIT, logfc.limit=LOGFC_LIMIT))
   )
   
   stringdb <- tar_map(
@@ -66,13 +70,15 @@ targets_main <- function() {
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
     tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "23999")),
     tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
-    tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins))
+    tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins)),
+    
+    tar_target(fig_de_heatmap, plot_de_heatmap(phospho, de_sites_median, what = "value_med"))
   )
   
   figures_pairs <- tar_map(
     values = NORM_COND,
     names = NAME,
-    tar_target(fig_pair_med, plot_replicate_pairs(phospho, CONDITION, WHAT, log_scale = LOG))
+    tar_target(fig_pairs, plot_replicate_pairs(phospho, CONDITION, WHAT, log_scale = LOG))
   )
 
   shiny <- list(

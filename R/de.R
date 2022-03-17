@@ -85,10 +85,18 @@ pull_proteins <- function(des) {
     filter(!is.na(gene_name))
 }
 
-make_de_genes <- function(de, fdr_limit=0.05, fc_limit=1) {
+make_de_genes <- function(de, fdr.limit=0.05, logfc.limit=1) {
   list(
-    up = pull_proteins(de %>% filter(FDR < fdr_limit & logFC >= fc_limit)),
-    down = pull_proteins(de %>% filter(FDR < fdr_limit & logFC <= -fc_limit))
+    up = pull_proteins(de %>% filter(FDR < fdr.limit & logFC >= logfc.limit)),
+    down = pull_proteins(de %>% filter(FDR < fdr.limit & logFC <= -logfc.limit))
   )
 }
 
+make_de_table <- function(de, info, fdr.limit, logfc.limit) {
+  de %>%
+    filter(FDR < fdr.limit & abs(logFC) >= logfc.limit) %>% 
+    select(id, logFC, PValue, FDR) %>% 
+    left_join(info, by = "id") %>% 
+    select(logFC, FDR, proteins, protein_names, gene_name, aa = amino_acid, in_pep = position_in_peptide, in_prot = position, charge) %>% 
+    mutate(across(c(logFC, FDR), ~signif(.x, 3)))
+}

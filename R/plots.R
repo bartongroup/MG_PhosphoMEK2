@@ -1,7 +1,7 @@
 okabe_ito_palette <- c("#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 
-plot_sample_distirbutions <- function(set, what="value_norm", bins=50, log_scale = FALSE) {
+plot_sample_distirbutions <- function(set, what="value_norm", bins=50, log_scale = FALSE, ncol=3) {
   d <- set$dat %>% 
     drop_na() %>% 
     mutate(val = get(what))
@@ -16,11 +16,11 @@ plot_sample_distirbutions <- function(set, what="value_norm", bins=50, log_scale
     #geom_vline(data = dm, aes(xintercept = M)) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
     labs(x = what, y = NULL) +
-    facet_wrap(~sample)
+    facet_wrap(~sample, ncol=ncol)
   plot_grid(g)
 }
 
-plot_replicate_pairs <- function(set, cond, what="value_norm", log_scale = FALSE) {
+plot_replicate_pairs <- function(set, cond, what="value_med", log_scale = FALSE) {
   dat <- set$dat %>% 
     mutate(val = get(what)) %>% 
     select(id, sample, val) %>% 
@@ -45,9 +45,10 @@ plot_replicate_pairs <- function(set, cond, what="value_norm", log_scale = FALSE
   plot_grid(g)
 }
 
-plot_distance_matrix <- function(set, text.size=10) {
-  tab <- log10(set$tab)
-  
+plot_distance_matrix <- function(set, what = "value_med", text.size=10) {
+  tab <- dat2mat(set$dat, what) %>% 
+    log10()
+
   cor(tab, use="complete.obs") %>% 
     as_tibble(rownames = "sample") %>%
     pivot_longer(-sample) %>% 
@@ -64,8 +65,9 @@ plot_distance_matrix <- function(set, text.size=10) {
 }
 
 
-plot_clustering <- function(set, text.size=10) {
-  tab <- log10(set$tab)
+plot_clustering <- function(set, what = "value_med", text.size=10) {
+  tab <- dat2mat(set$dat, what) %>% 
+    log10()
   
   corr.mat <- cor(tab, use="complete.obs")
   dis <- as.dist(1 - corr.mat)  # dissimilarity matrix
@@ -105,7 +107,7 @@ plot_volcano <- function(res, fc="logFC", p="PValue", fdr="FDR", groupvar="contr
     ggplot(aes(x=x, y=-log10(y), colour=sig)) +
     theme_bw() +
     theme(panel.grid = element_blank()) +
-    geom_vline(xintercept = 0, colour = "grey60") +
+    geom_vline(xintercept = 0, colour = "brown") +
     geom_point(size=point.size, alpha=point.alpha) +
     scale_colour_manual(values=c("grey70", "black")) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
@@ -121,7 +123,9 @@ plot_ma <- function(res, fc="logFC", sm="AveExpr", fdr = "FDR", groupvar = "cont
   res <- res %>%
     mutate(sig = get(fdr) < fdr.limit & abs(get(fc)) > logfc.limit)
   g <- ggplot(res, aes_string(x=sm, y=fc, colour="sig")) +
-    theme_linedraw() +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_hline(yintercept = 0, colour = "brown") +
     geom_point(size=point.size, alpha=point.alpha) +
     scale_colour_manual(values=c("grey70", "black")) +
     facet_grid(as.formula(glue::glue(". ~ {groupvar}"))) +
@@ -373,7 +377,7 @@ plot_phospho_norm <- function(pho, pro, pho_id) {
 }
 
 
-plot_pho_vs_prot <- function(pho, pro, pho_ids) {
+plot_pho_vs_prot <- function(pho, pro, pho_ids, ncol=6) {
   pho$dat %>%
     filter(id %in% pho_ids) %>% 
     left_join(pho$metadata, by = "sample") %>% 
@@ -386,7 +390,7 @@ plot_pho_vs_prot <- function(pho, pro, pho_ids) {
     geom_point(shape = 21, size = 2, colour = "grey20") +
     scale_fill_manual(values = c("#FFFFFF", "#000000")) +
     labs(x = expression(log[10]~phosphosite), y = expression(log[10]~protein)) +
-    facet_wrap(~id, scales = "free")
+    facet_wrap(~id, scales = "free", ncol=ncol)
 }
 
 plot_pho_prot_cor <- function(pho, pro, nrow=2) {
@@ -408,3 +412,22 @@ plot_pho_prot_cor <- function(pho, pro, nrow=2) {
     labs(x = expression(log[10]~protein), y = expression(log[10]~phosphosite))
   plot_grid(g)
 }
+
+
+plot_de_heatmap <- function(set, ids, what = "value_med", max.scale=NULL) {
+  if(length(ids) == 0) return(NULL)
+  X <- set$dat %>%
+    mutate(val = get(what)) %>% 
+    filter(id %in% ids) %>%
+    mutate(
+      sample = factor(sample, levels=set$metadata$sample),
+      id = factor(id, levels=ids)) %>%
+    group_by(id) %>%
+    mutate(M = mean(val), logfc = log2(val / M)) %>%
+    pivot_wider(id_cols = id, names_from = sample, values_from = logfc) %>%
+    left_join(set$info %>% select(id, gene_name), by="id") %>% 
+    unite("gid", gene_name, id, sep="-") %>% 
+    column_to_rownames("gid")
+  ggheatmap(X, legend.name=expression(log[2]~FC), with.y.text = TRUE)
+}
+
