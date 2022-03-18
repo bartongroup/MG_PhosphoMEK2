@@ -192,15 +192,14 @@ For more information see [Ritchie et al. 2015](https://academic.oup.com/nar/arti
 
 ### Results
 
-[Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek/tab/de_peptides.tsv)
-
 ```{r fig_pep_volcano, fig.width=4, fig.height=4}
 tar_read(fig_volcano_median)
 tar_read(fig_ma_median)
 ```
 
 ```{r pep_de}
-d <- tar_read(tab_de_median)
+d <- tar_read(tab_de_median) %>% 
+  filter(FDR < 0.05)
 d %>% 
   DT::datatable(rownames = FALSE) %>% 
   DT::formatStyle(columns = colnames(d), fontSize = '80%')
@@ -221,7 +220,8 @@ tar_read(fig_de_heatmap)
 
 ## Resources
 
-- [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/pep/)
+ - [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/de/)
+ - [Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek2/tab/phospho_de.tsv)
 
 ## Session info
 

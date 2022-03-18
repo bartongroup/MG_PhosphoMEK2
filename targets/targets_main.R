@@ -50,7 +50,7 @@ targets_main <- function() {
     
     tar_target(de_sites, phospho_de %>% filter(FDR < FDR_LIMIT & abs(logFC) >= LOGFC_LIMIT) %>% pull(id)),
     tar_target(fig_pho_vs_pro, plot_pho_vs_prot(phospho, proteins, de_sites)),
-    tar_target(tab_de, make_de_table(phospho_de, phospho$info, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT))
+    tar_target(tab_de, make_de_table(phospho_de, phospho$info))
   )
   
   selections <- list(
@@ -68,7 +68,7 @@ targets_main <- function() {
   figures <- list(
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
-    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, "23999")),
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, 23999)),
     tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
     tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins)),
     
@@ -86,7 +86,7 @@ targets_main <- function() {
   )
   
   tables <- list(
-    tar_target(sav_de, phospho_de_median %>% mutate_if(is.numeric, ~signif(.x, 4)) %>% write_tsv("tab/phospho_de.tsv"))
+    tar_target(sav_de, tab_de_median %>% write_tsv("tab/phospho_de.tsv"))
   )
   
   c(

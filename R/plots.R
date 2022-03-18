@@ -419,9 +419,7 @@ plot_de_heatmap <- function(set, ids, what = "value_med", max.scale=NULL) {
   X <- set$dat %>%
     mutate(val = get(what)) %>% 
     filter(id %in% ids) %>%
-    mutate(
-      sample = factor(sample, levels=set$metadata$sample),
-      id = factor(id, levels=ids)) %>%
+    mutate(sample = factor(sample, levels=set$metadata$sample)) %>% 
     group_by(id) %>%
     mutate(M = mean(val), logfc = log2(val / M)) %>%
     pivot_wider(id_cols = id, names_from = sample, values_from = logfc) %>%

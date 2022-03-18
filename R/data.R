@@ -14,7 +14,7 @@ read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
     left_join(measure_cols, by="reporter")
   raw <- read_tsv(file, col_select = c(data_cols$raw_name, mr$column_name), show_col_types = FALSE) %>% 
     set_names(c(data_cols$name, mr$sample)) %>% 
-    mutate(id = as.character(id)) %>% 
+    mutate(id = as.integer(id)) %>% 
     filter(rlang::eval_tidy(rlang::parse_expr(filt)))
   dat <- raw %>% 
     select(all_of(id_cols), all_of(meta$sample)) %>%
@@ -111,11 +111,13 @@ pho_pro_match <- function(pho, pro) {
   pho2pro <- pho$info %>% 
     select(phospho_id = id, protein_id = protein_ids) %>% 
     separate_rows(protein_id, sep=";") %>% 
+    mutate(protein_id = as.integer(protein_id)) %>% 
     distinct()
   
   pro2pho <- pro$info %>% 
     select(protein_id = id, phospho_id = phospho_ids) %>% 
     separate_rows(phospho_id, sep=";") %>% 
+    mutate(phospho_id = as.integer(phospho_id)) %>% 
     distinct()
   
   p2p <- bind_rows(pho2pro, pro2pho) %>% distinct()
@@ -202,6 +204,7 @@ normalise_constand <- function(set) {
   tab_norm <- RAS(tab)
   dn <- tab_norm %>% 
     as_tibble(rownames = "id") %>% 
+    mutate(id = as.integer(id)) %>% 
     pivot_longer(-id, names_to = "sample", values_to = "value_constand")
   set$dat <- set$dat %>% 
     left_join(dn, by = c("id", "sample"))
@@ -225,7 +228,8 @@ normalise_to_proteins <- function(pho, pro) {
   # here we ignore a handful of phospho sites that a linked to multiple protein groups
   pho$phospho2prot <- pho$info %>% 
     select(id, protein_id = protein_ids) %>% 
-    filter(!str_detect(protein_id, ";"))
+    filter(!str_detect(protein_id, ";")) %>% 
+    mutate(across(everything(), as.integer))
   # mean protein abundance across conditions
   mp <- pro$dat %>% 
     drop_na() %>% 

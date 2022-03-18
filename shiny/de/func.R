@@ -139,6 +139,7 @@ sh_get_all_phosphos <- function(pep, pho, peptide_id) {
     filter(id == peptide_id) %>% 
     select(peptide_id = id, phospho_ids, sequence, start_position, end_position) %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
+    mutate(phospho_ids = as.integer(phospho_ids)) %>% 
     rename(phospho_id = phospho_ids) %>% 
     left_join(pho$info %>% select(phospho_id = id, peptide_ids, protein, gene_name, localization_prob, amino_acid, position), by = "phospho_id") %>% 
     mutate(position_in_peptide = position - start_position + 1) %>% 
@@ -199,6 +200,7 @@ sh_plot_full_protein <- function(de, pro, pro_id, pho_id, cntr) {
     filter(id == pro_id) 
   d <- this_pro %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
+    mutate(phospho_ids = as.integer(phospho_ids)) %>% 
     select(id = phospho_ids, sequence_length) %>% 
     left_join(de, by="id") %>% 
     filter(!is.na(logFC) & contrast == cntr)

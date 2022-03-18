@@ -135,9 +135,10 @@ server <- function(input, output) {
     if(!is.null(input$plot_brush)){
       brushed <- na.omit(brushedPoints(xy_data, input$plot_brush))
       phospho_ids <- brushed$id
-      sel_genes <- data$pho2gene %>% 
+      sel_genes <- data$pho2gene_first %>% 
         filter(id %in% phospho_ids) %>% 
-        pull(gene_name)
+        pull(gene_name) %>% 
+        unique()
       n <- length(sel_genes)
       if(n > 2 && n <= max_points) {
         fe <- sh_functional_enrichment(all_genes, sel_genes, terms)
