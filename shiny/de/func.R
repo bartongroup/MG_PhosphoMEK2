@@ -197,7 +197,8 @@ sh_plot_pepseq <- function(pep, pho, de, pho_id) {
 
 sh_plot_full_protein <- function(de, pro, pro_id, pho_id, cntr) {
   this_pro <- pro$info %>% 
-    filter(id == pro_id) 
+    filter(id %in% pro_id) 
+  if(nrow(this_pro) > 1) this_pro = this_pro[1, ]
   d <- this_pro %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
     mutate(phospho_ids = as.integer(phospho_ids)) %>% 

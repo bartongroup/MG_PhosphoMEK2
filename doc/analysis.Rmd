@@ -76,7 +76,7 @@ Modifications in the phosphosite files are provided explicitly, with the amino a
 
 ### Filtering
 
-We filter all data by removing reverse and potential contaminants. Also we filter `Razor + unique peptides > 2` for proteins and `Localization prob > 0.95` for phospho sites.
+We filter all data by removing reverse and potential contaminants. Also we filter `Razor + unique peptides > 2` for proteins and `Localization prob > 0.75` for phospho sites.
 
 We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition.
 
@@ -115,7 +115,7 @@ tar_read(fig_pho_clustering_median)
 Here is pairwise comparison of all replicates within each condition.
 
 ```{r pep_rep_comp, fig.width=8, fig.height=8}
-tar_read(fig_pairs_median_DMSO)
+tar_read(fig_pairs_median_DMSO) 
 tar_read(fig_pairs_median_MEKi)
 ```
 
@@ -208,13 +208,13 @@ d %>%
 
 Here is a visual overview of significant sites. The figure shows protein abundance vs. phospho site abundance. Where protein data are not available, it is replaced with zero. We see that quite a few sites are linked to proteins with no detection. If we used normalisation to the total proteome, these sites would be missing.
 
-```{r prot_vs_pho_de, fig.width=12, fig.height=14}
+```{r prot_vs_pho_de, fig.width=12, fig.height=20}
 tar_read(fig_pho_vs_pro_median) 
 ```
 
 Heatmap (hierarchical clustering of rows and columns) of significant sites.
 
-```{r de_heatmap, fig.width=8, fig.height=10}
+```{r de_heatmap, fig.width=8, fig.height=15}
 tar_read(fig_de_heatmap)
 ```
 

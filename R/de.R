@@ -1,4 +1,4 @@
-prepare_phospho_counts <- function(pho, loc_prob_limit=0.95) {
+prepare_phospho_counts <- function(pho, loc_prob_limit=0.75) {
   sel <- pho$info %>% 
     filter(localization_prob > loc_prob_limit) %>% 
     pull(id)
@@ -7,7 +7,7 @@ prepare_phospho_counts <- function(pho, loc_prob_limit=0.95) {
 }
 
 
-limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=NULL, what = "value_med", log_scale=TRUE, loc_prob_limit=0.95) {
+limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=NULL, what = "value_med", log_scale=TRUE, loc_prob_limit=0.75) {
   if("localization_prob" %in% colnames(set$info)) {
     d <- prepare_phospho_counts(set, loc_prob_limit)
   } else {
@@ -36,8 +36,8 @@ limma_de <- function(set, formula="~ 0 + condition", sig.level=0.05, info_cols=N
   
   res <- map_dfr(ctrs, function(cf) {
     topTable(fit, coef=cf, number=1e6, sort.by="none") %>%
-      as_tibble(rownames = "id") %>%
-      mutate(id = as.integer(id)) %>% 
+      as_tibble(rownames = "mid") %>%
+      separate(mid, c("id", "multi"), sep = "-") %>% 
       mutate(contrast = cf) %>%
       rename(FDR = adj.P.Val, PValue = P.Value) %>%
       select(-c(t, B))
@@ -96,8 +96,8 @@ make_de_genes <- function(de, fdr.limit=0.05, logfc.limit=1) {
 make_de_table <- function(de, info, fdr.limit, logfc.limit) {
   de %>%
     #filter(FDR < fdr.limit & abs(logFC) >= logfc.limit) %>% 
-    select(id, logFC, PValue, FDR) %>% 
+    select(id, multi, logFC, PValue, FDR) %>% 
     left_join(info, by = "id") %>% 
-    select(id, logFC, FDR, proteins, protein_names, gene_name, aa = amino_acid, in_pep = position_in_peptide, in_prot = position, charge) %>% 
+    select(id, multi, logFC, FDR, proteins, protein_names, gene_name, aa = amino_acid, in_pep = position_in_peptide, in_prot = position, charge) %>% 
     mutate(across(c(logFC, FDR), ~signif(.x, 3)))
 }

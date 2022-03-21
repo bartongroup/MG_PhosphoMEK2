@@ -11,17 +11,20 @@ make_metadata <- function(samples, conditions) {
 
 read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
   mr <- meta %>% 
-    left_join(measure_cols, by="reporter")
+    full_join(measure_cols, by="reporter")
+  n2n <- set_names(data_cols$raw_name, data_cols$name)
   raw <- read_tsv(file, col_select = c(data_cols$raw_name, mr$column_name), show_col_types = FALSE) %>% 
-    set_names(c(data_cols$name, mr$sample)) %>% 
-    mutate(id = as.integer(id)) %>% 
-    filter(rlang::eval_tidy(rlang::parse_expr(filt)))
+    rename(all_of(n2n)) %>% 
+    mutate(id = as.character(id))
   dat <- raw %>% 
-    select(all_of(id_cols), all_of(meta$sample)) %>%
-    pivot_longer(-all_of(id_cols), names_to = "sample", values_to = "value") %>% 
-    mutate(sample = factor(sample, levels = meta$sample)) %>% 
-    mutate(value = na_if(value, 0))
-  info <- raw %>% select(-all_of(meta$sample))
+    filter(rlang::eval_tidy(rlang::parse_expr(filt))) %>% 
+    select(all_of(id_cols), all_of(measure_cols$column_name)) %>% 
+    pivot_longer(-all_of(id_cols), names_to = "column_name", values_to = "value") %>% 
+    mutate(value = na_if(value, 0)) %>% 
+    left_join(mr, by = "column_name") %>% 
+    select(id, multi, sample, value) %>% 
+    mutate(multi = multi %>% as.character())
+  info <- raw %>% select(-all_of(mr$column_name))
   
   set <- list(
     info = info,
@@ -62,17 +65,17 @@ get_phospho_ids <- function(pep, peptide_ids) {
     unique()
 }
 
-# At least one non-missing value in all replicates in at least one condition
+# At least one non-missing value in all replicates in at least one condition.
 get_expressed_ids <- function(set) {
   set$dat %>% 
     left_join(set$metadata, by="sample") %>% 
-    group_by(id, condition) %>% 
+    group_by(id, multi, condition) %>% 
     summarise(n_tot = n(), n_good = length(na.omit(value))) %>% 
     ungroup() %>% 
-    group_by(id) %>% 
+    group_by(id, multi) %>% 
     summarise(n_good_conditions = sum(n_tot == n_good)) %>% 
     filter(n_good_conditions > 0) %>% 
-    pull(id)
+    select(id, multi)
 }
 
 set_comparison <- function(pho, pep, pro) {
@@ -83,18 +86,19 @@ set_comparison <- function(pho, pep, pro) {
   pho2pep <- pho$info %>% 
     select(phospho_id = id, peptide_id = peptide_ids) %>% 
     separate_rows(peptide_id, sep=";") %>% 
-    filter(phospho_id %in% good_pho & peptide_id %in% good_pep) %>% 
+    filter(phospho_id %in% good_pho$id & peptide_id %in% good_pep$id) %>% 
     distinct()
   
   pho2pro <- pho$info %>% 
     select(phospho_id = id, protein_id = protein_ids) %>% 
     separate_rows(protein_id, sep=";") %>% 
-    filter(phospho_id %in% good_pho & protein_id %in% good_pro) %>% 
+    filter(phospho_id %in% good_pho$id & protein_id %in% good_pro$id) %>% 
     distinct()
   
-  tb <- tibble(phospho_id = good_pho) %>%
-    full_join(pho2pep) %>%
-    full_join(pho2pro)
+  tb <- good_pho %>%
+    select(phospho_id = id, multi) %>% 
+    full_join(pho2pep, by = "phospho_id") %>%
+    full_join(pho2pro, by = "phospho_id")
   
   list(
     `Phospho site` = unique(tb$phospho_id),
@@ -105,39 +109,38 @@ set_comparison <- function(pho, pep, pro) {
 
 # match all phosphosites vs all proteins, mark expressed as "good"
 pho_pro_match <- function(pho, pro) {
-  good_pho <- get_expressed_ids(pho)
-  good_pro <- get_expressed_ids(pro)
+  good_pho <- get_expressed_ids(pho) %>% 
+    add_column(good_pho = 1)
+  good_pro <- get_expressed_ids(pro) %>% 
+    select(-multi) %>% 
+    add_column(good_pro = 1)
   
   pho2pro <- pho$info %>% 
     select(phospho_id = id, protein_id = protein_ids) %>% 
     separate_rows(protein_id, sep=";") %>% 
-    mutate(protein_id = as.integer(protein_id)) %>% 
     distinct()
   
   pro2pho <- pro$info %>% 
     select(protein_id = id, phospho_id = phospho_ids) %>% 
     separate_rows(phospho_id, sep=";") %>% 
-    mutate(phospho_id = as.integer(phospho_id)) %>% 
     distinct()
   
-  p2p <- bind_rows(pho2pro, pro2pho) %>% distinct()
-
-  tb <- p2p %>% 
+  bind_rows(pho2pro, pro2pho) %>%
+    distinct() %>% 
+    left_join(good_pho, by=c("phospho_id" = "id")) %>%
+    left_join(good_pro, by = c("protein_id" = "id")) %>%
+    filter(!(is.na(good_pho) & is.na(good_pro))) %>% 
     mutate(
-      good_pho = phospho_id %in% good_pho,
-      good_pro = protein_id %in% good_pro
+      good_pho = !is.na(good_pho),
+      good_pro = !is.na(good_pro)
     )
 }
 
 
-get_detected_genes <- function(pho) {
-  pho$dat %>% 
-    select(id, value) %>% 
-    drop_na() %>% 
-    group_by(id) %>% 
-    tally() %>% 
-    left_join(pho$info, by="id") %>% 
+get_phospho_genes <- function(pho) {
+  pho$info %>% 
     select(gene_name) %>% 
+    drop_na() %>% 
     separate_rows(gene_name, sep=";") %>% 
     distinct() %>% 
     pull(gene_name)
@@ -203,11 +206,11 @@ normalise_constand <- function(set) {
   tab <- dat2mat(set$dat, "value")
   tab_norm <- RAS(tab)
   dn <- tab_norm %>% 
-    as_tibble(rownames = "id") %>% 
-    mutate(id = as.integer(id)) %>% 
-    pivot_longer(-id, names_to = "sample", values_to = "value_constand")
+    as_tibble(rownames = "mid") %>% 
+    separate(mid, c("id", "multi"), sep = "-") %>% 
+    pivot_longer(-c(id, multi), names_to = "sample", values_to = "value_constand")
   set$dat <- set$dat %>% 
-    left_join(dn, by = c("id", "sample"))
+    left_join(dn, by = c("id", "multi", "sample"))
   set
 }
 
@@ -228,8 +231,7 @@ normalise_to_proteins <- function(pho, pro) {
   # here we ignore a handful of phospho sites that a linked to multiple protein groups
   pho$phospho2prot <- pho$info %>% 
     select(id, protein_id = protein_ids) %>% 
-    filter(!str_detect(protein_id, ";")) %>% 
-    mutate(across(everything(), as.integer))
+    filter(!str_detect(protein_id, ";"))
   # mean protein abundance across conditions
   mp <- pro$dat %>% 
     drop_na() %>% 
@@ -253,10 +255,11 @@ normalise_to_proteins <- function(pho, pro) {
 
 dat2mat <- function(d, what) {
   d %>% 
-    select(id, sample, val = !!what) %>% 
+    select(id, multi, sample, val = !!what) %>% 
+    unite(mid, c(id, multi), sep = "-") %>% 
     drop_na() %>% 
-    pivot_wider(id_cols = id, names_from = sample, values_from = val) %>% 
-    column_to_rownames("id") %>% 
+    pivot_wider(id_cols = mid, names_from = sample, values_from = val) %>% 
+    column_to_rownames("mid") %>% 
     as.matrix()
 }
 
@@ -275,4 +278,18 @@ protein_count <- function(tab_pho_pro) {
     mutate(`Protein detected` = if_else(good_pro, "Yes", "No"), .before = good_pro) %>% 
     select(-good_pro) %>% 
     rename(`N matched proteins` = n_prot)
+}
+
+
+detect_duplicates <- function(set) {
+  dups <- set$dat %>% 
+    select(id, multi, sample, value) %>%
+    pivot_wider(id_cols = c(id, multi), values_from = value, names_from = sample) %>%
+    drop_na() %>% 
+    unite("values", all_of(set$metadata$sample)) %>% 
+    group_by(values) %>%
+    mutate(group_id = cur_group_id(), n = n()) %>%
+    ungroup() %>%
+    filter(n > 1) %>% 
+    arrange(group_id)
 }

@@ -10,6 +10,8 @@ library(tidyverse)
 library(DT)
 source("func.R")
 
+select <- dplyr::select
+
 css <- "table{font-size: 11px; background-color: #EAF5FF}"
 
 ### Read data ###
@@ -112,6 +114,8 @@ server <- function(input, output) {
       unique()
   }
   
+  
+  
   output$peptideInfo <- renderTable({
     xy_data <- get_xy_data()
     phospho_ids <- select_phospho()
@@ -166,7 +170,7 @@ server <- function(input, output) {
     if(!is.null(phospho_ids) && length(phospho_ids) == 1) {
       protein_id <- select_proteins(phospho_ids)
       data$pro$info %>% 
-        filter(id == protein_id) %>% 
+        filter(id %in% protein_id) %>% 
         pull(protein_names)
     }
   })
@@ -193,8 +197,10 @@ server <- function(input, output) {
   output$prophoPlot <- renderPlot({
     phospho_ids <- select_phospho()
     if(!is.null(phospho_ids) && length(phospho_ids) == 1) {
-      protein_id <- select_proteins(phospho_ids)
-      sh_plot_full_protein(data$de, data$pro, protein_id[1], phospho_ids, input$contrast)
+      protein_ids <- select_proteins(phospho_ids)
+      #print(phospho_ids)
+      #print(protein_ids)
+      sh_plot_full_protein(data$de, data$pro, protein_ids, phospho_ids, input$contrast)
     }
   })
 
@@ -215,7 +221,7 @@ server <- function(input, output) {
 
   output$allPhosphoTable <- DT::renderDataTable({
     xy_data <- get_xy_data()
-    all_table(filter(xy_data, contrast == input$contrast))
+    all_table(xy_data)
   })
 }
 

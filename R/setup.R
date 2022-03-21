@@ -32,7 +32,7 @@ PROTEINS_FILE <- "mq_data/proteinGroups.txt"
 
 PROTEINS_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
-  "id", "id", "i",
+  "id", "id", "c",
   "peptide_ids", "Peptide IDs", "c",
   "phospho_ids", "Phospho (STY) site IDs", "c",
   "proteins", "Protein IDs", "c",
@@ -49,6 +49,7 @@ PROTEINS_ID_COLUMNS <- c("id")
 
 PROTEINS_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
+  multi = 1,
   column_name = glue::glue("Reporter intensity corrected {reporter} Total") |> as.character()
 )
 
@@ -63,7 +64,7 @@ PEPTIDES_FILE <- "mq_data/peptides.txt"
 
 PEPTIDES_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
-  "id", "id", "i",
+  "id", "id", "c",
   "phospho_ids", "Phospho (STY) site IDs", "c",
   "protein_ids", "Protein group IDs", "c", 
   "sequence", "Sequence", "c",
@@ -81,6 +82,7 @@ PEPTIDES_ID_COLUMNS <- c("id")
 
 PEPTIDES_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
+  multi = 1,
   column_name = glue::glue("Reporter intensity corrected {reporter}") |> as.character()
 )
 
@@ -94,7 +96,7 @@ PHOSPHO_FILE <- "mq_data/Phospho (STY)Sites.txt"
 
 PHOSPHO_DATA_COLUMNS <- tibble::tribble(
   ~name, ~raw_name, ~type,
-  "id", "id", "i",
+  "id", "id", "c",
   "peptide_ids", "Peptide IDs", "c",
   "protein_ids", "Protein group IDs", "c", 
   "proteins", "Proteins", "c",
@@ -120,12 +122,14 @@ PHOSPHO_ID_COLUMNS <- c("id")
 
 KEEP_PHOSPHO_COLUMNS <- c("protein", "gene_name", "position", "localization_prob")
 
-PHOSPHO_MEASURE_COLUMNS <- tibble::tibble(
+MULTI <- 1:3
+PHOSPHO_MEASURE_COLUMNS <- tidyr::expand_grid(
   reporter = REPORTERS,
-  column_name = glue::glue("Reporter intensity corrected {reporter}___1") |> as.character()
-)
+  multi = MULTI
+) |>
+  dplyr::mutate(column_name = glue::glue("Reporter intensity corrected {reporter}___{multi}") |> as.character())
 
-PHOSPHO_FILTER <- "localization_prob > 0.95 & !(reverse %in% '+') & !(contaminant %in% '+')"
+PHOSPHO_FILTER <- "localization_prob > 0.75 & !(reverse %in% '+') & !(contaminant %in% '+')"
 
 
 

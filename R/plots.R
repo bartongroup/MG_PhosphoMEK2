@@ -23,17 +23,17 @@ plot_sample_distirbutions <- function(set, what="value_norm", bins=50, log_scale
 plot_replicate_pairs <- function(set, cond, what="value_med", log_scale = FALSE) {
   dat <- set$dat %>% 
     mutate(val = get(what)) %>% 
-    select(id, sample, val) %>% 
+    select(id, multi, sample, val) %>% 
     left_join(set$metadata, by="sample") %>% 
     filter(condition == cond) %>% 
     drop_na() %>% 
-    select(id, sample, val)
+    select(id, multi, sample, val)
   if(log_scale) dat$val <- log10(dat$val)
   samples <- dat$sample %>% unique()
   g <- expand_grid(x=samples, y=samples) %>% 
     filter(x != y) %>%
     left_join(dat, by=c("x" = "sample")) %>%
-    left_join(dat, by=c("id", "y" = "sample")) %>% 
+    left_join(dat, by=c("id", "multi", "y" = "sample")) %>% 
   ggplot(aes(x=val.x, y=val.y)) +
     theme_bw() + 
     theme(panel.grid = element_blank(), legend.position = "none") +
@@ -349,12 +349,12 @@ plot_phospho_orders <- function(pr, rep=1) {
 
 
 # A look at normalisation to protein
-plot_phospho_norm <- function(pho, pro, pho_id) {
+plot_phospho_norm <- function(pho, pro, pho_id, pho_multi) {
   g <- pho$dat %>% 
-    filter(id == pho_id) %>% 
+    filter(id == pho_id & multi == pho_multi) %>% 
     left_join(pho$phospho2prot, by = "id") %>% 
     left_join(pro$dat %>% select(protein_id = id, sample, prot = value), by = c("protein_id", "sample")) %>% 
-    select(-c(id, value_constand, protein_id)) %>% 
+    select(-c(id, multi, value_constand, protein_id)) %>% 
     rename(
       `Protein raw` = prot,
       `Phospho raw` = value,
@@ -377,20 +377,21 @@ plot_phospho_norm <- function(pho, pro, pho_id) {
 }
 
 
-plot_pho_vs_prot <- function(pho, pro, pho_ids, ncol=6) {
+plot_pho_vs_prot <- function(pho, pro, sites, ncol=6) {
   pho$dat %>%
-    filter(id %in% pho_ids) %>% 
+    right_join(sites, by = c("id", "multi")) %>% 
     left_join(pho$metadata, by = "sample") %>% 
     left_join(pho$phospho2prot, by = "id") %>% 
     left_join(pro$dat %>% select(protein_id = id, sample, prot = value_med), by = c("protein_id", "sample")) %>% 
     mutate(prot = replace_na(prot, 1)) %>% 
+    unite(mid, c("id", "multi"), sep = "-") %>% 
   ggplot(aes(x = log10(value_med), y = log10(prot), fill = condition)) +
     theme_bw() +
     theme(panel.grid = element_blank()) +
     geom_point(shape = 21, size = 2, colour = "grey20") +
     scale_fill_manual(values = c("#FFFFFF", "#000000")) +
     labs(x = expression(log[10]~phosphosite), y = expression(log[10]~protein)) +
-    facet_wrap(~id, scales = "free", ncol=ncol)
+    facet_wrap(~mid, scales = "free", ncol=ncol)
 }
 
 plot_pho_prot_cor <- function(pho, pro, nrow=2) {
@@ -414,17 +415,17 @@ plot_pho_prot_cor <- function(pho, pro, nrow=2) {
 }
 
 
-plot_de_heatmap <- function(set, ids, what = "value_med", max.scale=NULL) {
-  if(length(ids) == 0) return(NULL)
+plot_de_heatmap <- function(set, sites, what = "value_med", max.scale=NULL) {
+  if(nrow(sites) == 0) return(NULL)
   X <- set$dat %>%
     mutate(val = get(what)) %>% 
-    filter(id %in% ids) %>%
+    right_join(sites, by = c("id", "multi")) %>% 
     mutate(sample = factor(sample, levels=set$metadata$sample)) %>% 
-    group_by(id) %>%
+    group_by(id, multi) %>%
     mutate(M = mean(val), logfc = log2(val / M)) %>%
-    pivot_wider(id_cols = id, names_from = sample, values_from = logfc) %>%
+    pivot_wider(id_cols = c(id, multi), names_from = sample, values_from = logfc) %>%
     left_join(set$info %>% select(id, gene_name), by="id") %>% 
-    unite("gid", gene_name, id, sep="-") %>% 
+    unite("gid", gene_name, id, multi, sep="-") %>% 
     column_to_rownames("gid")
   ggheatmap(X, legend.name=expression(log[2]~FC), with.y.text = TRUE)
 }
