@@ -90,26 +90,29 @@ server <- function(input, output) {
     tab_idx <- as.numeric(input$allPhosphoTable_rows_selected)
     if (!is.null(input$plot_brush)) {
       brushed <- na.omit(brushedPoints(xy_data, input$plot_brush))
-      sel <- brushed$id
+      sel <- brushed %>% 
+        select(id, multi)
     } else if (!is.null(input$plot_hover)) {
       near <- nearPoints(xy_data, input$plot_hover, threshold = 20, maxpoints = max_hover)
-      sel <- near$id
+      sel <- near %>% 
+        select(id, multi)
     } else if (length(tab_idx) > 0) {
-      sel <- xy_data[tab_idx, ] %>% pull(id)
+      sel <- xy_data[tab_idx, ] %>% 
+        select(id, multi)
     }
     return(sel)
   }
   
-  select_peptides <- function(phospho_ids) {
+  select_peptides <- function(pho_sel) {
     data$pho2pep %>% 
-      filter(id %in% phospho_ids) %>% 
+      filter(id %in% pho_sel$id) %>% 
       pull(peptide_ids) %>% 
       unique()
   }
   
-  select_proteins <- function(phospho_ids) {
+  select_proteins <- function(pho_sel) {
     data$pho2pro %>% 
-      filter(id %in% phospho_ids) %>% 
+      filter(id %in% pho_sel$id) %>% 
       pull(protein_ids) %>% 
       unique()
   }
@@ -118,15 +121,16 @@ server <- function(input, output) {
   
   output$peptideInfo <- renderTable({
     xy_data <- get_xy_data()
-    phospho_ids <- select_phospho()
+    pho_sel <- select_phospho()
+    if (is.null(pho_sel)) return(NULL)
     df <- NULL
-    if (!is.null(phospho_ids) && length(phospho_ids) >= 1 && length(phospho_ids) <= max_points) {
-      peptide_ids <- select_peptides(phospho_ids)
+    if (!is.null(pho_sel) && nrow(pho_sel) >= 1 && nrow(pho_sel) <= max_points) {
+      peptide_ids <- select_peptides(pho_sel)
       df <- data$pep$info %>% filter(id %in% peptide_ids) %>% 
         arrange(gene_name) %>% 
         select(sequence, protein, gene_name, start_position, end_position) %>% 
         mutate_at(vars(start_position, end_position), as.integer)
-    } else if (length(phospho_ids) > max_points) {
+    } else if (nrow(pho_sel) > max_points) {
       df <- data.frame(Error = paste0('only ',max_points,' points can be selected.'))
     }
     df
@@ -134,13 +138,13 @@ server <- function(input, output) {
 
   enrichmentTable <- function(terms) {
     xy_data <- get_xy_data()
-    phospho_ids <- NULL
+    pho_sel <- NULL
     fe <- NULL
     if (!is.null(input$plot_brush)) {
       brushed <- na.omit(brushedPoints(xy_data, input$plot_brush))
-      phospho_ids <- brushed$id
+      pho_sel <- brushed %>% select(id, multi)
       sel_genes <- data$pho2gene_first %>% 
-        filter(id %in% phospho_ids) %>% 
+        filter(id %in% pho_sel$id) %>% 
         pull(gene_name) %>% 
         unique()
       n <- length(sel_genes)
@@ -166,9 +170,9 @@ server <- function(input, output) {
   
   
   output$geneInfo <- renderText({
-    phospho_ids <- select_phospho()
-    if (!is.null(phospho_ids) && length(phospho_ids) == 1) {
-      protein_id <- select_proteins(phospho_ids)
+    pho_sel <- select_phospho()
+    if (!is.null(pho_sel) && nrow(pho_sel) == 1) {
+      protein_id <- select_proteins(pho_sel)
       data$pro$info %>% 
         filter(id %in% protein_id) %>% 
         pull(protein_names)
@@ -176,18 +180,18 @@ server <- function(input, output) {
   })
   
   output$peptideSeq <- renderPlot({
-    phospho_ids <- select_phospho()
-    if (!is.null(phospho_ids) && length(phospho_ids) == 1) {
-      sh_plot_pepseq(data$pep, data$pho, data$de, phospho_ids)
+    pho_sel <- select_phospho()
+    if (!is.null(pho_sel) && nrow(pho_sel) == 1) {
+      sh_plot_pepseq(data$pep, data$pho, data$de, pho_sel)
     }
   })
   
   output$intensityPlot <- renderPlot({
-    phospho_ids <- select_phospho()
-    if (!is.null(phospho_ids) && length(phospho_ids) == 1) {
-      protein_id <- select_proteins(phospho_ids)
+    pho_sel <- select_phospho()
+    if (!is.null(pho_sel) && nrow(pho_sel) == 1) {
+      protein_id <- select_proteins(pho_sel)
       plot_grid(
-        sh_plot_intensities(data$pho, phospho_ids, tit = "Phospho site", log_scale = FALSE),
+        sh_plot_intensities(data$pho, pho_sel, tit = "Phospho site", log_scale = FALSE),
         sh_plot_intensities(data$pro, protein_id[1], tit = "Protein", log_scale = FALSE),
         align = "h"
       )
@@ -195,12 +199,12 @@ server <- function(input, output) {
   })
   
   output$prophoPlot <- renderPlot({
-    phospho_ids <- select_phospho()
-    if (!is.null(phospho_ids) && length(phospho_ids) == 1) {
-      protein_ids <- select_proteins(phospho_ids)
-      #print(phospho_ids)
+    pho_sel <- select_phospho()
+    if (!is.null(pho_sel) && nrow(pho_sel) == 1) {
+      protein_ids <- select_proteins(pho_sel)
+      #print(pho_sel)
       #print(protein_ids)
-      sh_plot_full_protein(data$de, data$pro, protein_ids, phospho_ids, input$contrast)
+      sh_plot_full_protein(data$de, data$pro, protein_ids, pho_sel, input$contrast)
     }
   })
 

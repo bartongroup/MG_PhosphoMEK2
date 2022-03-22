@@ -162,11 +162,11 @@ mark_position <- function(s, pos) {
   s
 }
 
-plot_phospho_intensities <- function(pho, phospho_id, what = "value_med", log_scale = TRUE, tit = NULL) {
+plot_phospho_intensities <- function(pho, pho_id, what = "value_med", log_scale = TRUE, tit = NULL) {
   pho_dat <- pho$dat %>% 
-    filter(id == phospho_id) %>% 
+    right_join(pho_id, by = c("id", "multi")) %>% 
     mutate(val = get(what)) %>% 
-    select(id, sample, val) %>% 
+    select(id, multi, sample, val) %>% 
     drop_na() %>% 
     left_join(pho$metadata, by = "sample")
   if (nrow(pho_dat) == 0) return(NULL)
@@ -174,7 +174,7 @@ plot_phospho_intensities <- function(pho, phospho_id, what = "value_med", log_sc
   if (log_scale) pho_dat$val <- log10(pho_dat$val)
   
   pho_info <- pho$info %>% 
-    filter(id == phospho_id)
+    filter(id == pho_id$id)
   
   # extract peptide sequence
   if (is.null(tit)) {
@@ -430,3 +430,30 @@ plot_de_heatmap <- function(set, sites, what = "value_med", max.scale = NULL) {
   ggheatmap(X, legend.name = expression(log[2]~FC), with.y.text = TRUE)
 }
 
+
+plot_duplications <- function(dup) {
+  d <- dup %>%
+    group_by(group_id) %>% 
+    summarise(multi = first(multi), n_dup = n())
+  g1 <- d %>%
+    group_by(multi) %>% 
+    tally() %>% 
+    ggplot(aes(x = multi, y = n)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_col() +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
+    labs(x = "Multiplicity", y = "Number of duplications")
+    
+  g2 <- d %>% 
+    group_by(n_dup) %>% 
+    tally() %>% 
+    ggplot(aes(x = n_dup, y = n)) +
+    theme_bw() +
+    theme(panel.grid = element_blank()) +
+    geom_col() +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
+    labs(x = "Number of duplications", y = "Count")
+
+  plot_grid(g1, g2, nrow = 1, align = "h")
+}

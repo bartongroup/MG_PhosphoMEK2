@@ -98,7 +98,7 @@ sh_functional_enrichment <- function(genes_all, genes_sel, term_data, gene2name 
 
 all_table <- function(d) {
   d %>% 
-    select(id, logFC, FDR, protein, gene_name) %>% 
+    select(id, multi, logFC, FDR, protein, gene_name) %>% 
     mutate_at(c("logFC", "FDR"), ~signif (.x, 3)) %>% 
     DT::datatable(class = 'cell-border strip hover', selection = "single", rownames = FALSE) 
 }
@@ -111,10 +111,10 @@ sh_mark_position <- function(s, pos) {
 }
 
 
-sh_get_phospho_info <- function(pep, pho, phospho_id) {
+sh_get_phospho_info <- function(pep, pho, pho_sel) {
   pho_info <- pho$info %>% 
-    filter(id == phospho_id) %>% 
-    select(phospho_id = id, peptide_ids, protein, gene_name, localization_prob, amino_acid, position)
+    right_join(pho_sel, by = "id") %>% 
+    select(phospho_id = id, multi, peptide_ids, protein, gene_name, localization_prob, amino_acid, position)
   
   peptide_ids <- pho_info$peptide_ids %>% 
     str_split(pattern = ";") %>% 
@@ -139,7 +139,6 @@ sh_get_all_phosphos <- function(pep, pho, peptide_id) {
     filter(id == peptide_id) %>% 
     select(peptide_id = id, phospho_ids, sequence, start_position, end_position) %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
-    mutate(phospho_ids = as.integer(phospho_ids)) %>% 
     rename(phospho_id = phospho_ids) %>% 
     left_join(pho$info %>% select(phospho_id = id, peptide_ids, protein, gene_name, localization_prob, amino_acid, position), by = "phospho_id") %>% 
     mutate(position_in_peptide = position - start_position + 1) %>% 
@@ -147,15 +146,15 @@ sh_get_all_phosphos <- function(pep, pho, peptide_id) {
 }
 
 
-sh_plot_pepseq <- function(pep, pho, de, pho_id) {
-  merged <- sh_get_phospho_info(pep, pho, pho_id)
+sh_plot_pepseq <- function(pep, pho, de, pho_sel) {
+  merged <- sh_get_phospho_info(pep, pho, pho_sel)
   pep_pho <- sh_get_all_phosphos(pep, pho, merged$peptide_id)
   
   pho_de <- de %>% 
-    select(phospho_id = id, logFC, AveExpr, FDR, contrast)
+    select(phospho_id = id, multi, logFC, AveExpr, FDR, contrast)
   
   w <- pep_pho %>% 
-    left_join(pho_de, by = "phospho_id") 
+    left_join(pho_de, by = "phospho_id")
   
   mx <- max(abs(na.omit(w$logFC)))
   dl <- w$position_in_peptide
@@ -166,7 +165,7 @@ sh_plot_pepseq <- function(pep, pho, de, pho_id) {
     pos = seq_along(aa)
   ) %>% 
     left_join(w, by = c("pos" = "position_in_peptide")) %>% 
-    mutate(this_one = phospho_id == pho_id)
+    mutate(this_one = phospho_id == pho_sel$id)
   txt <- dp %>%
     select(pos, aa, this_one) %>% 
     distinct() %>% 
@@ -183,7 +182,7 @@ sh_plot_pepseq <- function(pep, pho, de, pho_id) {
       plot.title = element_text(hjust = 0.5),
       plot.background = element_rect(fill = alpha("lightgoldenrod1", 0.3), colour = NA)
     ) +
-    geom_col(position = position_dodge(), aes(fill = contrast, colour = factor(FDR < 0.05, levels = c(FALSE, TRUE)))) +
+    geom_col(position = position_dodge(), aes(fill = multi, colour = factor(FDR < 0.05, levels = c(FALSE, TRUE)))) +
     geom_hline(yintercept = 0, size = 2, colour = "grey50", alpha = 0.2) +
     geom_text(data = txt %>% filter(!this_one), aes(x = pos, y = 0, label = aa), size = 5, colour = "black") +
     geom_text(data = txt %>% filter(this_one), aes(x = pos, y = 0, label = aa), size = 8, colour = "red") +
@@ -191,40 +190,41 @@ sh_plot_pepseq <- function(pep, pho, de, pho_id) {
     scale_y_continuous(expand = expansion(mult = c(0.1, 0.1)), limits = c(-mx, mx), breaks = scales::breaks_width(2)) +
     scale_fill_manual(values = okabe_ito_palette, drop = FALSE, na.translate = FALSE) +
     scale_colour_manual(values = c("grey70", "black"), drop = FALSE) +
-    guides(color = "none", fill = guide_legend(title = NULL))
+    guides(color = "none", fill = guide_legend(title = "Multiplicity"))
 }
 
 
-sh_plot_full_protein <- function(de, pro, pro_id, pho_id, cntr) {
+sh_plot_full_protein <- function(de, pro, pro_id, pho_sel, cntr) {
   this_pro <- pro$info %>% 
     filter(id %in% pro_id) 
   if (nrow(this_pro) > 1) this_pro = this_pro[1, ]
   d <- this_pro %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
-    mutate(phospho_ids = as.integer(phospho_ids)) %>% 
     select(id = phospho_ids, sequence_length) %>% 
     left_join(de, by = "id") %>% 
     filter(!is.na(logFC) & contrast == cntr)
- ggplot(d, aes(x = position, y = logFC, colour = FDR < 0.01)) + 
+ ggplot(d, aes(x = position, y = logFC, fill = FDR < 0.01)) + 
     theme_bw() +
     theme(
       legend.position = "none",
       panel.grid = element_blank()
     ) +
-    geom_segment(aes(xend = position, yend = 0)) +
-    geom_point(size = 2) +
-    geom_point(data = d %>% filter(id == pho_id), colour = "red", size = 3) +
+    geom_segment(aes(xend = position, yend = 0, colour = multi)) +
+    geom_point(size = 2, shape = 21, colour = "grey60") +
+    geom_point(data = d %>% right_join(pho_sel, by = c("id", "multi")), colour = "red", size = 3) +
     geom_hline(yintercept = 0) +
-    scale_colour_manual(values = c("grey80", "black")) +
+    scale_fill_manual(values = c("grey80", "black")) +
+    scale_colour_manual(values = okabe_ito_palette) +
     scale_x_continuous(expand = c(0,0), limits = c(0, this_pro$sequence_length)) +
     labs(x = "Position", y = expression(log[2]~FC), title = NULL)
 }
 
 
 
-sh_plot_intensities <- function(set, pid, what = "value_med", log_scale = TRUE, tit = NULL) {
+sh_plot_intensities <- function(set, sel, what = "value_med", log_scale = TRUE, tit = NULL) {
+  if ("character" %in% class(sel)) sel <- tibble(id = sel, multi = "1")
   dat <- set$dat %>% 
-    filter(id == pid) %>% 
+    right_join(sel, by = c("id", "multi")) %>% 
     mutate(val = get(what)) %>% 
     select(id, sample, val) %>% 
     drop_na() %>% 

@@ -293,3 +293,45 @@ detect_duplicates <- function(set) {
     filter(n > 1) %>% 
     arrange(group_id)
 }
+
+convert_sequences <- function(win, wcov, pos) {
+  sqw <- win %>% str_split("") %>% unlist()
+  pw <- wcov %>% str_split("") %>% unlist()
+  sqw[pw == "P"] %>%
+    str_c(collapse = "") %>% 
+    mark_position(pos)
+}
+
+
+get_phospho_info <- function(pep, pho, pho_del) {
+  pho_info <- pho$info %>% 
+    right_join(pho_del, by = "id") %>% 
+    select(phospho_id = id, multi, peptide_ids, protein, gene_name, localization_prob, amino_acid, position)
+  
+  peptide_ids <- pho_info$peptide_ids %>% 
+    str_split(pattern = ";") %>% 
+    unlist()
+  
+  pep_info <- pep$info %>% 
+    filter(id %in% peptide_ids) %>% 
+    select(peptide_id = id, phospho_ids, sequence, start_position, end_position) %>% 
+    # if one phospho site is in multiple peptides, select peptide with longest sequence
+    mutate(length = nchar(sequence)) %>% 
+    arrange(desc(length), sequence) %>% 
+    slice(1)
+  
+  bind_cols(pho_info, pep_info) %>% 
+    mutate(position_in_peptide = position - start_position + 1) %>% 
+    mutate(sequence_pho = mark_position(sequence, position_in_peptide))
+}
+
+
+duplicate_example <- function(pep, pho, dup, gr) {
+  pho_sel <- dup %>% 
+    filter(group_id == gr) %>% 
+    select(id, multi)
+  get_phospho_info(pep, pho, pho_sel) %>% 
+    select(phospho_id, multi, protein, gene_name, localization_prob, amino_acid, position_in_peptide, position, sequence)
+
+
+}
