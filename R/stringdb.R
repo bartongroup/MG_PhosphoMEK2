@@ -1,8 +1,8 @@
 run_stringdb <- function(ids, species, score_threshold=400, version="11") {
-  if(length(ids) < 3) return(NULL)
+  if (length(ids) < 3) return(NULL)
   
-  if(!dir.exists("string_db")) dir.create("string_db")
-  string_db <- STRINGdb$new(version="11", species=species, score_threshold=score_threshold, input_directory="string_db")
+  if (!dir.exists("string_db")) dir.create("string_db")
+  string_db <- STRINGdb$new(version = "11", species = species, score_threshold = score_threshold, input_directory = "string_db")
   mapped <- string_db$map(data.frame(id = ids), "id", removeUnmappedRows = TRUE)
   cl <- string_db$get_clusters(mapped)
   en <- map(cl, ~string_db$get_enrichment(.x))
@@ -20,7 +20,7 @@ run_stringdb <- function(ids, species, score_threshold=400, version="11") {
 
 
 plot_stringdb_clusters <- function(sdb, file, min_cluster_size = 2, size = 4000) {
-  if(is.null(sdb)) return(NULL)
+  if (is.null(sdb)) return(NULL)
   
   hits <- map_dfr(sdb$clusters, function(x) {tibble(n = length(x), cl = x)}) %>%
     filter(n >= min_cluster_size) %>%
@@ -43,7 +43,7 @@ proteins2genename <- function(prots, proteins) {
 }
 
 stringdb_gene_clusters <- function(sdb, proteins) {
-  if(is.null(sdb)) return(NULL)
+  if (is.null(sdb)) return(NULL)
   
   genes <- map_chr(sdb$clusters, function(cl) {
     proteins2genename(cl, proteins) %>%  str_c(collapse = ", ")

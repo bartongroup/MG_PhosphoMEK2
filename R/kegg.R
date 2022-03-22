@@ -12,7 +12,7 @@ get_kegg <- function(species, bm_genes) {
   term2gene <- map(terms$term_id, function(path_id) {
     pw <- KEGGREST::keggGet(path_id)
     pb$tick()
-    if(!is.null(pw[[1]]$GENE)) {
+    if (!is.null(pw[[1]]$GENE)) {
       # KEGG list of genes is a vector with alternate NCBI integer number and gene description
       gns <-  pw[[1]]$GENE
       ncbi_ids = gns %>% str_subset("^\\d+$") %>% as.integer()

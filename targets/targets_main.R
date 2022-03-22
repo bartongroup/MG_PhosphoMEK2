@@ -1,11 +1,11 @@
 targets_main <- function() {
   
   biomart <- list(
-    tar_target(mart, useEnsembl(biomart="ensembl", dataset=ENSEMBL_DATASET, version=ENSEMBL_VERSION)),
+    tar_target(mart, useEnsembl(biomart = "ensembl", dataset = ENSEMBL_DATASET, version = ENSEMBL_VERSION)),
     tar_target(bm_genes, biomart_fetch_genes(mart)),
     tar_target(all_terms, list(
       go = bm_fetch_go(mart, phospho_genes),
-      gs = bm_fetch_go(mart, phospho_genes, slim=TRUE),
+      gs = bm_fetch_go(mart, phospho_genes, slim = TRUE),
       re = fetch_reactome(mart, phospho_genes),
       kg = get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes))
     )
@@ -28,8 +28,8 @@ targets_main <- function() {
   )
   
   proteins <- list(
-    tar_target(peptide_de, limma_de(peptides, info_cols=KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
-    tar_target(protein_de, limma_de(proteins, info_cols=KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
+    tar_target(peptide_de, limma_de(peptides, info_cols = KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
+    tar_target(protein_de, limma_de(proteins, info_cols = KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
     tar_target(fig_volcano_prot, plot_volcano(protein_de)),
     
     tar_target(tab_pho_pro, pho_pro_match(phospho, proteins)),
@@ -40,11 +40,11 @@ targets_main <- function() {
     values = NORMALISATIONS,
     names = NAME,
   
-    tar_target(phospho_de, limma_de(phospho, info_cols=KEEP_PHOSPHO_COLUMNS, what = WHAT, log_scale = LOG, loc_prob_limit = 0.75)),
+    tar_target(phospho_de, limma_de(phospho, info_cols = KEEP_PHOSPHO_COLUMNS, what = WHAT, log_scale = LOG, loc_prob_limit = 0.75)),
     tar_target(fig_volcano, plot_volcano(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_ma, plot_ma(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
     tar_target(fig_up_down, plot_up_down(phospho_de, logfc.limit = LOGFC_LIMIT, fdr.limit = FDR_LIMIT)),
-    tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG, ncol=5)),
+    tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG, ncol = 5)),
     tar_target(fig_pho_distmat, plot_distance_matrix(phospho, WHAT)),
     tar_target(fig_pho_clustering, plot_clustering(phospho, WHAT)),
     
@@ -55,20 +55,20 @@ targets_main <- function() {
   
   selections <- list(
     tar_target(phospho_genes, get_phospho_genes(phospho)),
-    tar_target(genes_de, make_de_genes(phospho_de_median, fdr.limit=FDR_LIMIT, logfc.limit=LOGFC_LIMIT))
+    tar_target(genes_de, make_de_genes(phospho_de_median, fdr.limit = FDR_LIMIT, logfc.limit = LOGFC_LIMIT))
   )
   
   stringdb <- tar_map(
     values = tibble::tibble(direction = c("up", "down")),
     names = direction,
-    tar_target(stringr_map, run_stringdb(genes_de[[direction]]$protein, species=TAXONOMY_ID)),
+    tar_target(stringr_map, run_stringdb(genes_de[[direction]]$protein, species = TAXONOMY_ID)),
     tar_target(png_strigr, plot_stringdb_clusters(stringr_map, paste0("fig/sdb_", direction, ".png")))
   )
   
   figures <- list(
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
-    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, pho_id="23999", pho_multi="1")),
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, pho_id = "23999", pho_multi = "1")),
     tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
     tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins)),
     

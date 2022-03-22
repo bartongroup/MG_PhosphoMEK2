@@ -11,7 +11,7 @@ make_metadata <- function(samples, conditions) {
 
 read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
   mr <- meta %>% 
-    full_join(measure_cols, by="reporter")
+    full_join(measure_cols, by = "reporter")
   n2n <- set_names(data_cols$raw_name, data_cols$name)
   raw <- read_tsv(file, col_select = c(data_cols$raw_name, mr$column_name), show_col_types = FALSE) %>% 
     rename(all_of(n2n)) %>% 
@@ -44,7 +44,7 @@ read_phospho_reporters <- function(file) {
     mutate(column_name = glue::glue("Reporter intensity corrected {reporter}___{order}") %>% as.character())
   read_tsv(file, col_select = c("id", rep_cols$column_name), show_col_types = FALSE) %>% 
     pivot_longer(-id, names_to = "column_name") %>% 
-    left_join(rep_cols, by="column_name")
+    left_join(rep_cols, by = "column_name")
 }
 
 get_peptide_ids <- function(pho, phospho_ids) {
@@ -68,7 +68,7 @@ get_phospho_ids <- function(pep, peptide_ids) {
 # At least one non-missing value in all replicates in at least one condition.
 get_expressed_ids <- function(set) {
   set$dat %>% 
-    left_join(set$metadata, by="sample") %>% 
+    left_join(set$metadata, by = "sample") %>% 
     group_by(id, multi, condition) %>% 
     summarise(n_tot = n(), n_good = length(na.omit(value))) %>% 
     ungroup() %>% 
@@ -85,13 +85,13 @@ set_comparison <- function(pho, pep, pro) {
   
   pho2pep <- pho$info %>% 
     select(phospho_id = id, peptide_id = peptide_ids) %>% 
-    separate_rows(peptide_id, sep=";") %>% 
+    separate_rows(peptide_id, sep = ";") %>% 
     filter(phospho_id %in% good_pho$id & peptide_id %in% good_pep$id) %>% 
     distinct()
   
   pho2pro <- pho$info %>% 
     select(phospho_id = id, protein_id = protein_ids) %>% 
-    separate_rows(protein_id, sep=";") %>% 
+    separate_rows(protein_id, sep = ";") %>% 
     filter(phospho_id %in% good_pho$id & protein_id %in% good_pro$id) %>% 
     distinct()
   
@@ -117,17 +117,17 @@ pho_pro_match <- function(pho, pro) {
   
   pho2pro <- pho$info %>% 
     select(phospho_id = id, protein_id = protein_ids) %>% 
-    separate_rows(protein_id, sep=";") %>% 
+    separate_rows(protein_id, sep = ";") %>% 
     distinct()
   
   pro2pho <- pro$info %>% 
     select(protein_id = id, phospho_id = phospho_ids) %>% 
-    separate_rows(phospho_id, sep=";") %>% 
+    separate_rows(phospho_id, sep = ";") %>% 
     distinct()
   
   bind_rows(pho2pro, pro2pho) %>%
     distinct() %>% 
-    left_join(good_pho, by=c("phospho_id" = "id")) %>%
+    left_join(good_pho, by = c("phospho_id" = "id")) %>%
     left_join(good_pro, by = c("protein_id" = "id")) %>%
     filter(!(is.na(good_pho) & is.na(good_pro))) %>% 
     mutate(
@@ -141,7 +141,7 @@ get_phospho_genes <- function(pho) {
   pho$info %>% 
     select(gene_name) %>% 
     drop_na() %>% 
-    separate_rows(gene_name, sep=";") %>% 
+    separate_rows(gene_name, sep = ";") %>% 
     distinct() %>% 
     pull(gene_name)
 }
@@ -157,7 +157,7 @@ n_quantified <- function(set) {
 # quantified phospho sites, peptides and proteins
 q_numbers <- function(pho, pep, pro) {
   map_dfr(list(pho, pep, pro), function(x) {tibble(n = n_quantified(x))}) %>% 
-    add_column(set = c("Phospho", "Peptide", "Protein"), .before=1)
+    add_column(set = c("Phospho", "Peptide", "Protein"), .before = 1)
 }
 
 
@@ -169,7 +169,7 @@ q_numbers <- function(pho, pep, pro) {
 #'
 #' @return Matrix normalized so row and column means equal 1/n (n - number of
 #'   columns)
-RAS <- function(K, max.iter=50, eps=1e-5) {
+RAS <- function(K, max.iter = 50, eps = 1e-5) {
   n <- ncol(K)
   m <- nrow(K)
   row_names <- rownames(K)
@@ -181,18 +181,18 @@ RAS <- function(K, max.iter=50, eps=1e-5) {
   
   cnt <- 1
   repeat {
-    row.mult <- 1 / (n * rowMeans(K, na.rm=TRUE))
+    row.mult <- 1 / (n * rowMeans(K, na.rm = TRUE))
     K <- K * row.mult
-    err1 <- 0.5 * sum(abs(colMeans(K, na.rm=TRUE) - 1/n))
-    col.mult <- 1 / (n * colMeans(K, na.rm=TRUE))
+    err1 <- 0.5 * sum(abs(colMeans(K, na.rm = TRUE) - 1/n))
+    col.mult <- 1 / (n * colMeans(K, na.rm = TRUE))
     K <- t(t(K) * col.mult)
-    err2 <- 0.5 * sum(abs(rowMeans(K, na.rm=TRUE) - 1/n))
+    err2 <- 0.5 * sum(abs(rowMeans(K, na.rm = TRUE) - 1/n))
     cnt <- cnt + 1
-    if(cnt > max.iter || (err1 < eps && err2 < eps)) break
+    if (cnt > max.iter || (err1 < eps && err2 < eps)) break
   }
   
   # reconstruct full table
-  KF <- matrix(NA, nrow=m, ncol=n)
+  KF <- matrix(NA, nrow = m, ncol = n)
   KF[good.rows, ] <- K
   
   colnames(KF) <- col_names
@@ -240,9 +240,9 @@ normalise_to_proteins <- function(pho, pro) {
     summarise(prot_mean = mean(value)) %>% 
     rename(protein_id = id)
   pho$dat <- pho$dat %>% 
-    left_join(pho$phospho2prot, by="id") %>% 
+    left_join(pho$phospho2prot, by = "id") %>% 
     left_join(select(pho$metadata, sample, condition), by = "sample") %>% 
-    left_join(mp, by=c("protein_id", "condition")) %>% 
+    left_join(mp, by = c("protein_id", "condition")) %>% 
     left_join(select(pro$dat, protein_id = id, sample, prot = value), by = c("protein_id", "sample")) %>% 
     mutate(
       value_prot = value / prot,
@@ -268,7 +268,7 @@ dat2mat <- function(d, what) {
 protein_count <- function(tab_pho_pro) {
   tab_pho_pro %>%
     filter(good_pho) %>%  
-    group_by(good_pro, phospho_id, .drop=FALSE) %>%
+    group_by(good_pro, phospho_id, .drop = FALSE) %>%
     summarise(n_prot = n()) %>%
     ungroup() %>% 
     group_by(good_pro, n_prot) %>%

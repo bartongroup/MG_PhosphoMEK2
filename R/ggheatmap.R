@@ -1,11 +1,11 @@
 ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size = 0.5, 
-                      text.size = 12, legend.text.size=12, legend.name = "value",
-                      dist.method = "euclidean", clust.method = "complete", title=NULL,
-                      with.y.text=FALSE, with.x.text=TRUE, palette="distiller") {
+                      text.size = 12, legend.text.size = 12, legend.name = "value",
+                      dist.method = "euclidean", clust.method = "complete", title = NULL,
+                      with.y.text = FALSE, with.x.text = TRUE, palette = "distiller") {
   
   d <- tab %>% 
     as_tibble(rownames = "rowname") %>% 
-    mutate(rowname = factor(rowname, levels=rownames(tab))) %>%
+    mutate(rowname = factor(rowname, levels = rownames(tab))) %>%
     pivot_longer(-rowname, names_to = "variable", values_to = "value") %>% 
     mutate(variable = factor(variable, levels = colnames(tab))) %>% 
     mutate(value = as.numeric(value))
@@ -32,7 +32,7 @@ ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size 
   
   eley <- ifelse(with.y.text, element_text(), element_blank())
   
-  mx <- max(abs(d$value), na.rm=TRUE)
+  mx <- max(abs(d$value), na.rm = TRUE)
   heat_plot <- ggplot(d, aes(x = variable, y = rowname, fill = value)) + 
     geom_tile() + 
     theme_classic() +
@@ -40,25 +40,25 @@ ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size 
       axis.line = element_blank(),
       text = element_text(size = text.size)
     ) + 
-    scale_y_discrete(position = "right", expand=c(0,0)) + 
+    scale_y_discrete(position = "right", expand = c(0,0)) + 
     scale_x_discrete(expand = c(0,0)) +
-    labs(x=NULL, y=NULL, title=title) 
-    #geom_vline(xintercept =c(3,6,9,12,15,18,21)+0.5, colour="white")
+    labs(x = NULL, y = NULL, title = title) 
+    #geom_vline(xintercept =c(3,6,9,12,15,18,21)+0.5, colour = "white")
   
-  if(palette == "viridis") {
-    heat_plot <- heat_plot + scale_fill_viridis_c(option="cividis", name = legend.name)
+  if (palette == "viridis") {
+    heat_plot <- heat_plot + scale_fill_viridis_c(option = "cividis", name = legend.name)
   } else {
-    heat_plot <- heat_plot + scale_fill_distiller(type="div", palette="RdBu", limits=c(-mx, mx), name = legend.name)
+    heat_plot <- heat_plot + scale_fill_distiller(type = "div", palette = "RdBu", limits = c(-mx, mx), name = legend.name)
   }
 
-  if(with.x.text) {
-    heat_plot <- heat_plot + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust=0.5))
+  if (with.x.text) {
+    heat_plot <- heat_plot + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   } else {
     heat_plot <- heat_plot + theme(axis.text.x = element_blank())
   }
   
-  if(with.y.text) {
-    heat_plot <- heat_plot + theme(axis.text.y = element_text(size=8))
+  if (with.y.text) {
+    heat_plot <- heat_plot + theme(axis.text.y = element_text(size = 8))
   } else {
     heat_plot <- heat_plot + theme(axis.text.y = element_blank())
   }

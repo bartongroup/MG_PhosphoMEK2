@@ -6,15 +6,15 @@ library(tarchetypes)
 packages <- c("biomaRt", "STRINGdb", "viridis", "cowplot", "ggridges", "ggbeeswarm", "GGally", "ggrepel", "uwot", "limma", "tidyverse")
 tar_option_set(packages = packages, format = "qs")
 options(tidyverse.quiet = TRUE, dplyr.summarise.inform = FALSE)
-if(!dir.exists("tab")) dir.create("tab")
-if(!dir.exists("fig")) dir.create("fig")
+if (!dir.exists("tab")) dir.create("tab")
+if (!dir.exists("fig")) dir.create("fig")
 
 select = dplyr::select
 
 # for interactive session only
-if(interactive()) sapply(packages, library, character.only=TRUE)
+if (interactive()) sapply(packages, library, character.only = TRUE)
 
-files_R <- list.files(c("R", "targets"), pattern="*.R$", full.names=TRUE)
+files_R <- list.files(c("R", "targets"), pattern = "*.R$", full.names = TRUE)
 sr_ <- sapply(files_R, source)
 
 

@@ -8,7 +8,7 @@
 # These additional columns will be inluded in the output.
 
 functionalEnrichment <- function(genes_all, genes_sel, term_data, gene2name = NULL,
-                                 min_count=3, sig_limit=0.05) {
+                                 min_count = 3, sig_limit = 0.05) {
   
   gene2term <- term_data$gene2term
   term_info <- term_data$terms
@@ -33,7 +33,7 @@ functionalEnrichment <- function(genes_all, genes_sel, term_data, gene2name = NU
   res <- map_dfr(terms, function(term) {
     info <- term_info %>% filter(term_id == term)
     # returns NAs if no term found
-    if(nrow(info) == 0) info <- na_term %>% mutate(term_id = term)
+    if (nrow(info) == 0) info <- na_term %>% mutate(term_id = term)
     
     # all genes with the term
     tgenes <- gene2term %>% filter(term_id == term) %>% pull(gene_name)
@@ -44,11 +44,11 @@ functionalEnrichment <- function(genes_all, genes_sel, term_data, gene2name = NU
     nsel <- length(tgenes_sel)
     
     expected <- nuni * Nsel / Nuni
-    fish <- matrix(c(nsel, nuni - nsel, Nsel - nsel, Nuni + nsel - Nsel - nuni), nrow=2)
+    fish <- matrix(c(nsel, nuni - nsel, Nsel - nsel, Nuni + nsel - Nsel - nuni), nrow = 2)
     ft <- fisher.test(fish, alternative = "greater")
     p <- as.numeric(ft$p.value)
     
-    if(!is.null(gene2name)) tgenes_sel <- gene2name[tgenes_sel] %>% unname()
+    if (!is.null(gene2name)) tgenes_sel <- gene2name[tgenes_sel] %>% unname()
     
     bind_cols(
       info,
@@ -57,12 +57,12 @@ functionalEnrichment <- function(genes_all, genes_sel, term_data, gene2name = NU
         sel = nsel,
         expect = expected,
         enrich = nsel / expected,
-        ids = paste(tgenes_sel, collapse=","),
+        ids = paste(tgenes_sel, collapse = ","),
         P = p
       )
     )
   }) %>% 
-    mutate(P = p.adjust(P, method="BH")) %>% 
+    mutate(P = p.adjust(P, method = "BH")) %>% 
     filter(sel >= min_count & P <= sig_limit) %>% 
     arrange(desc(enrich)) %>% 
     mutate(enrich = round(enrich, 1), expect = round(expect, 2))
@@ -80,20 +80,20 @@ make_term_list <- function(gene2term) {
     set_names(unique(gene2term$term_id) %>% sort)  # dodgy!
 }
 
-fgsea_run <- function(trm, res, min.size=3) {
+fgsea_run <- function(trm, res, min.size = 3) {
   res <- res %>% filter(!is.na(value) & !is.na(gene_name))
   term_list <-  make_term_list(trm$gene2term %>% filter(gene_name %in% res$gene_name))
   ranks <-  set_names(res$value, res$gene_name)
-  fgsea::fgsea(pathways=term_list, stats=ranks, nproc=6, minSize=min.size, eps=0) %>%
+  fgsea::fgsea(pathways = term_list, stats = ranks, nproc = 6, minSize = min.size, eps = 0) %>%
     as_tibble %>%
-    left_join(trm$terms, by=c("pathway" = "term_id")) %>%
+    left_join(trm$terms, by = c("pathway" = "term_id")) %>%
     arrange(NES) %>% 
     select(term = pathway, term_name, pval, padj, NES, size, leading_edge = leadingEdge) 
 }
 
 
-fgsea_cache <- function(d, terms, file, valvar="logFC", groupvar = "contrast") {
-  if(file.exists(file)) {
+fgsea_cache <- function(d, terms, file, valvar = "logFC", groupvar = "contrast") {
+  if (file.exists(file)) {
     fg <- read_rds(file)
   } else {
     fg <- d %>% 
@@ -107,7 +107,7 @@ fgsea_cache <- function(d, terms, file, valvar="logFC", groupvar = "contrast") {
   fg
 }
 
-fgsea_all_terms <- function(d, all_terms, valvar="logFC", groupvar = "contrast") {
+fgsea_all_terms <- function(d, all_terms, valvar = "logFC", groupvar = "contrast") {
   nms <- names(all_terms)
   map(nms, function(trm) {
     cat(glue::glue("  Computing fgsea for {trm}\n\n"))
@@ -117,7 +117,7 @@ fgsea_all_terms <- function(d, all_terms, valvar="logFC", groupvar = "contrast")
     set_names(nms)
 }
 
-plot_fgsea_enrichment <- function(term, res, terms, value="logFC") {
+plot_fgsea_enrichment <- function(term, res, terms, value = "logFC") {
   lst <- terms$term2gene[[term]]
   rnks <- set_names(res[[value]], res$gene_name)
   fgsea::plotEnrichment(lst, rnks)
@@ -133,13 +133,13 @@ select_star_fgsea <- function(se, fg, groupvar = "contrast") {
       genes <- w$leading_edge[[1]]
       se %>% 
         filter(gene_name %in% genes & !!sym(groupvar) == gr) %>% 
-        add_column(term_id = term, .before="gene_name") %>% 
-        add_column(NES = w$NES, .before="gene_name")
+        add_column(term_id = term, .before = "gene_name") %>% 
+        add_column(NES = w$NES, .before = "gene_name")
     })
 }
 
 select_star_go <- function(se, bm_go, terms) {
   bm_go$gene2term %>% 
     filter(term_id %in% terms) %>% 
-    inner_join(se, by="gene_name")
+    inner_join(se, by = "gene_name")
 }

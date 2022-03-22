@@ -10,7 +10,7 @@ biomart_fetch_genes <- function(mart) {
     "external_gene_name",
     "entrezgene_id",
     "description"
-  ), mart=mart) %>% 
+  ), mart = mart) %>% 
     dplyr::rename(
       chr = chromosome_name,
       start = start_position,
@@ -28,7 +28,7 @@ biomart_fetch_genes <- function(mart) {
 
 # For a given list of gene names, fetch all GO-terms
 
-bm_fetch_go_genes <- function(mart, gene_names, slim=FALSE) {
+bm_fetch_go_genes <- function(mart, gene_names, slim = FALSE) {
   id <- ifelse(slim, "goslim_goa_accession", "go_id")
   gene2go <- getBM(
     attributes = c("external_gene_name", id),
@@ -61,9 +61,9 @@ bm_fetch_go_descriptions <- function(mart) {
 # Get ontology directly from geneontology.org
 
 go_fetch_go_descriptions <- function(obo_file = "go.obo") {
-  if(!dir.exists("cache")) dir.create("cache")
+  if (!dir.exists("cache")) dir.create("cache")
   obo_path <- file.path("cache", obo_file)
-  if(!file.exists(obo_path)) download.file("http://purl.obolibrary.org/obo/go.obo", obo_path)
+  if (!file.exists(obo_path)) download.file("http://purl.obolibrary.org/obo/go.obo", obo_path)
   go <- ontologyIndex::get_ontology(obo_path, extract_tags = c("everything"))
   tibble(
     term_id = go$id,
@@ -74,7 +74,7 @@ go_fetch_go_descriptions <- function(obo_file = "go.obo") {
 
 # Fetch GO-gene and GO descriptions
 
-bm_fetch_go <- function(mart, gene_names, slim=FALSE) {
+bm_fetch_go <- function(mart, gene_names, slim = FALSE) {
   gene2go <- bm_fetch_go_genes(mart, gene_names, slim)
   # using geneontology.org as Ensembl has term descriptions missing
   #goterms <- go_fetch_go_descriptions()
