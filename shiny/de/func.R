@@ -170,9 +170,11 @@ sh_plot_pepseq <- function(pep, pho, de, pho_sel) {
     select(pos, aa, this_one) %>% 
     distinct() %>% 
     mutate(this_one = replace_na(this_one, FALSE))
-  n <- nrow(dp)
-  
-  ggplot(dp, aes(x = as_factor(pos), y = logFC)) +
+  dp <- dp %>% 
+    mutate(pos = as_factor(pos)) %>% 
+    filter(!is.na(logFC))
+
+  ggplot(dp, aes(x = pos, y = logFC)) +
     theme_void() +
     theme(
       axis.ticks.y = element_line(size = 0.5),
