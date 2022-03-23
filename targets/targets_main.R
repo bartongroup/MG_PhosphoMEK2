@@ -14,9 +14,12 @@ targets_main <- function() {
   read_data <- list(
     tar_target(metadata, make_metadata(SAMPLE_REPORTER, CONDITIONS$CONDITION)),
     tar_target(proteins, read_mq(PROTEINS_FILE, PROTEINS_DATA_COLUMNS, PROTEINS_MEASURE_COLUMNS, PROTEINS_ID_COLUMNS, PROTEINS_FILTER, metadata)),
-    tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, PEPTIDES_FILTER,metadata)),
-    tar_target(phospho, read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, PHOSPHO_FILTER, metadata) %>%
-      normalise_to_proteins(proteins)),
+    tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, PEPTIDES_FILTER, metadata)),
+    tar_target(phospho,
+      read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, PHOSPHO_FILTER, metadata) %>%
+      normalise_to_proteins(proteins) %>%
+      deduplicate()
+    ),
     tar_target(phospho_rep, read_phospho_reporters(PHOSPHO_FILE))
   )
 
@@ -25,8 +28,7 @@ targets_main <- function() {
     tar_target(quants, q_numbers(phospho, peptides, proteins)),
     tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
     tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length()),
-    tar_target(phospho_dup, detect_duplicates(phospho)),
-    tar_target(phospho_dup_example, duplicate_example(peptides, phospho, phospho_dup, 74))
+    tar_target(phospho_dup_example, duplicate_example(peptides, phospho, 74))
   )
 
   proteins <- list(
@@ -73,7 +75,7 @@ targets_main <- function() {
     tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, pho_id = "23999", pho_multi = "1")),
     tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
     tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins)),
-    tar_target(fig_pho_dups, plot_duplications(phospho_dup)),
+    tar_target(fig_pho_dups, plot_duplications(phospho$duplicates)),
 
     tar_target(fig_de_heatmap, plot_de_heatmap(phospho, de_sites_median, what = "value_med"))
   )

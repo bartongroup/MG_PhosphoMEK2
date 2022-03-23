@@ -320,11 +320,26 @@ get_phospho_info <- function(pep, pho, pho_del) {
     mutate(sequence_pho = mark_position(sequence, position_in_peptide))
 }
 
-duplicate_example <- function(pep, pho, dup, gr) {
-  pho_sel <- dup %>%
+duplicate_example <- function(pep, pho, gr) {
+  pho_sel <- pho$duplicates %>%
     filter(group_id == gr) %>%
     select(id, multi)
   get_phospho_info(pep, pho, pho_sel) %>%
     select(phospho_id, multi, protein, gene_name, localization_prob, amino_acid, position_in_peptide, position, sequence)
+}
 
+deduplicate <- function(set) {
+  set$duplicates <- detect_duplicates(set)
+  dup_sel <- set$duplicates %>%
+    group_by(group_id) %>%
+    mutate(num = 1:n()) %>%
+    ungroup() %>%
+    filter(num > 1) %>% 
+    select(id, multi) %>% 
+    add_column(dup = 1)
+  set$dat <- set$dat %>% 
+    left_join(dup_sel, by = c("id", "multi")) %>% 
+    filter(is.na(dup)) %>% 
+    select(-dup)
+  set
 }
