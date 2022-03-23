@@ -1,19 +1,19 @@
-ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size = 0.5, 
+ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size = 0.5,
                       text.size = 12, legend.text.size = 12, legend.name = "value",
                       dist.method = "euclidean", clust.method = "complete", title = NULL,
                       with.y.text = FALSE, with.x.text = TRUE, palette = "distiller") {
-  
-  d <- tab %>% 
-    as_tibble(rownames = "rowname") %>% 
+
+  d <- tab %>%
+    as_tibble(rownames = "rowname") %>%
     mutate(rowname = factor(rowname, levels = rownames(tab))) %>%
-    pivot_longer(-rowname, names_to = "variable", values_to = "value") %>% 
-    mutate(variable = factor(variable, levels = colnames(tab))) %>% 
+    pivot_longer(-rowname, names_to = "variable", values_to = "value") %>%
+    mutate(variable = factor(variable, levels = colnames(tab))) %>%
     mutate(value = as.numeric(value))
-    
+
   dd <- function(X) {
     X %>% dist(method = dist.method) %>% hclust(method = clust.method) %>% as.dendrogram()
   }
-  
+
   # Cluster rows
   if (order.row) {
     dd.row <- dd(tab)
@@ -21,7 +21,7 @@ ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size 
     ordered_row_names <- row.names(tab[row.ord, ])
     d$rowname <- factor(d$rowname, levels = ordered_row_names)
   }
-  
+
   # Cluster columns
   if (order.col) {
     dd.col <- dd(t(tab))
@@ -29,55 +29,60 @@ ggheatmap <- function(tab, order.col = TRUE, order.row = TRUE, dendro.line.size 
     ordered_col_names <- colnames(tab[, col.ord])
     d$variable <- factor(d$variable, levels = ordered_col_names)
   }
-  
-  eley <- ifelse(with.y.text, element_text(), element_blank())
-  
+
   mx <- max(abs(d$value), na.rm = TRUE)
-  heat_plot <- ggplot(d, aes(x = variable, y = rowname, fill = value)) + 
-    geom_tile() + 
+  heat_plot <- ggplot(d, aes(x = variable, y = rowname, fill = value)) +
+    geom_tile() +
     theme_classic() +
     theme(
       axis.line = element_blank(),
       text = element_text(size = text.size)
-    ) + 
-    scale_y_discrete(position = "right", expand = c(0,0)) + 
-    scale_x_discrete(expand = c(0,0)) +
-    labs(x = NULL, y = NULL, title = title) 
-    #geom_vline(xintercept =c(3,6,9,12,15,18,21)+0.5, colour = "white")
-  
+    ) +
+    scale_y_discrete(position = "right", expand = c(0, 0)) +
+    scale_x_discrete(expand = c(0, 0)) +
+    labs(x = NULL, y = NULL, title = title)
+
   if (palette == "viridis") {
-    heat_plot <- heat_plot + scale_fill_viridis_c(option = "cividis", name = legend.name)
+    heat_plot <- heat_plot +
+      scale_fill_viridis_c(option = "cividis", name = legend.name)
   } else {
-    heat_plot <- heat_plot + scale_fill_distiller(type = "div", palette = "RdBu", limits = c(-mx, mx), name = legend.name)
+    heat_plot <- heat_plot +
+      scale_fill_distiller(type = "div", palette = "RdBu", limits = c(-mx, mx), name = legend.name)
   }
 
   if (with.x.text) {
-    heat_plot <- heat_plot + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    heat_plot <- heat_plot +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
   } else {
-    heat_plot <- heat_plot + theme(axis.text.x = element_blank())
+    heat_plot <- heat_plot +
+      theme(axis.text.x = element_blank())
   }
-  
+
   if (with.y.text) {
-    heat_plot <- heat_plot + theme(axis.text.y = element_text(size = 8))
+    heat_plot <- heat_plot +
+      theme(axis.text.y = element_text(size = 8))
   } else {
-    heat_plot <- heat_plot + theme(axis.text.y = element_blank())
+    heat_plot <- heat_plot +
+      theme(axis.text.y = element_blank())
   }
-  
+
   final_plot <- heat_plot
   if (order.row) {
     dendro_data_row <- ggdendro::dendro_data(dd.row, type = "rectangle")
-    dendro_row <- axis_canvas(heat_plot, axis = "y", coord_flip = TRUE) + 
-      geom_segment(data = ggdendro::segment(dendro_data_row), aes(y = -y, x = x, xend = xend, yend = -yend), size = dendro.line.size) + 
+    dendro_row <- axis_canvas(heat_plot, axis = "y", coord_flip = TRUE) +
+      geom_segment(data = ggdendro::segment(dendro_data_row), aes(y = -y, x = x, xend = xend, yend = -yend), size = dendro.line.size) +
       coord_flip()
-    final_plot <- insert_yaxis_grob(final_plot, dendro_row, grid::unit(0.2, "null"), position = "left")
+    final_plot <- final_plot %>%
+      cowplot::insert_yaxis_grob(dendro_row, grid::unit(0.2, "null"), position = "left")
   }
-  
+
   if (order.col) {
     dendro_data_col <- ggdendro::dendro_data(dd.col, type = "rectangle")
-    dendro_col <- axis_canvas(heat_plot, axis = "x") + 
+    dendro_col <- cowplot::axis_canvas(heat_plot, axis = "x") +
       geom_segment(data = ggdendro::segment(dendro_data_col), aes(x = x, y = y, xend = xend, yend = yend), size = dendro.line.size)
-    final_plot <- insert_xaxis_grob(final_plot, dendro_col, grid::unit(0.2, "null"), position = "top")
+    final_plot <- final_plot %>%
+      cowplot::insert_xaxis_grob(dendro_col, grid::unit(0.2, "null"), position = "top")
   }
-  
+
   ggdraw(final_plot)
 }
