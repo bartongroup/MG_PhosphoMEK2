@@ -72,13 +72,15 @@ We would like to explore this dataset with the DAG in the following ways:
 
 In contrast to the [first analysis](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek/doc/analysis.html), raw proteomics files were analysed with MaxQuant. From the MaxQuant output we use `Phospho (STY)Sites.txt`, `peptides.txt` and `proteinGroups.txt` files. They are interlinked via integer IDs: phosphosite file contains peptide IDs and protein IDs for each site, peptides file contains phosphosite IDs and protein IDs for each peptide and, as you can guess, protein file contains phosphosite IDs and peptide IDs for each protein (group). This allows for efficient merging and analysing of these data.
 
+Phosphosite data contain three columns for each sample measurement, indicating if the quantification was based on singly (1), doubly (2) or multiply (3) phosphorylated peptides. For most sites data are based on singly phosphorylated peptides, but when double/multiple phosphorylation is observed, it is included in this analysis, with column `multi` in phosphoproteomics data.
+
 Modifications in the phosphosite files are provided explicitly, with the amino acid, position in the peptide and position in the protein, per site. This does not require parsing of complicated strings, as in *Proteome Discoverer* data.
 
 ### Filtering
 
 We filter all data by removing reverse and potential contaminants. Also we filter `Razor + unique peptides > 2` for proteins and `Localization prob > 0.75` for phospho sites.
 
-We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition.
+We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition. 
 
 ```{r detect}
 tar_load(quants)
@@ -104,7 +106,7 @@ There are phosphorylation sites with duplicated values, that is two or more site
 tar_read(fig_pho_dups)
 ```
 
-The figure above shows that most duplications happen in multiplicity 2 and 3 (which were not included in the first version of this analysis). Here is an example of three sites that have identical intensities across all samples:
+The figure above shows that most duplications happens in peptides with 2 or more phosphorylations (which were not included in the first version of this analysis). Here is an example of three sites that have identical intensities across all samples:
 
 ```{r dup_ex}
 tar_read(phospho_dup_example) %>% 
@@ -113,7 +115,7 @@ tar_read(phospho_dup_example) %>%
 
 They are all very close on the protein. Perhaps this is how enrichment works - pulling close sites together?
 
-To avoid probles with differential abundance I remove duplicates, leaving the first one out of each group.
+To avoid problems with differential abundance duplicates are removed, leaving the first one out of each group. `r N(tar_read(n_dup_removed))` phospho sites were removed by this process.
 
 ### Abundance distribution
 

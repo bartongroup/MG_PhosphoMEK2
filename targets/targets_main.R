@@ -28,7 +28,8 @@ targets_main <- function() {
     tar_target(quants, q_numbers(phospho, peptides, proteins)),
     tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
     tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length()),
-    tar_target(phospho_dup_example, duplicate_example(peptides, phospho, 74))
+    tar_target(phospho_dup_example, duplicate_example(peptides, phospho, 74)),
+    tar_target(n_dup_removed, n_duplicates(phospho$duplicates))
   )
 
   proteins <- list(

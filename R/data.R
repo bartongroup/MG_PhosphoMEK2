@@ -150,7 +150,7 @@ get_phospho_genes <- function(pho) {
 # quantified in all replicates in at least one condition
 n_quantified <- function(set) {
   get_expressed_ids(set) %>%
-    length()
+    nrow()
 }
 
 # quantified phospho sites, peptides and proteins
@@ -342,4 +342,13 @@ deduplicate <- function(set) {
     filter(is.na(dup)) %>% 
     select(-dup)
   set
+}
+
+n_duplicates <- function(dup) {
+  dup %>%
+    group_by(group_id) %>%
+    mutate(num = 1:n()) %>%
+    ungroup() %>%
+    filter(num > 1) %>% 
+    nrow()
 }
