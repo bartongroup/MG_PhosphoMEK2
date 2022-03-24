@@ -3,12 +3,11 @@ targets_main <- function() {
   biomart <- list(
     tar_target(mart, useEnsembl(biomart = "ensembl", dataset = ENSEMBL_DATASET, version = ENSEMBL_VERSION)),
     tar_target(bm_genes, biomart_fetch_genes(mart)),
-    tar_target(all_terms, list(
-      go = bm_fetch_go(mart, phospho_genes),
-      gs = bm_fetch_go(mart, phospho_genes, slim = TRUE),
-      re = fetch_reactome(mart, phospho_genes),
-      kg = get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes))
-    )
+    tar_target(go_terms,  bm_fetch_go(mart, phospho_genes)),
+    tar_target(gs_terms,  bm_fetch_go(mart, phospho_genes, slim = TRUE)),
+    tar_target(re_terms, fetch_reactome(mart, phospho_genes)),
+    tar_target(kg_terms, get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes)),
+    tar_target(all_terms, list(go = go_terms, gs = gs_terms, re = re_terms, kg = kg_terms))
   )
 
   read_data <- list(
@@ -27,7 +26,7 @@ targets_main <- function() {
     tar_target(phospho_rep_names, phospho_rep %>% pull(column_name) %>% unique()),
     tar_target(quants, q_numbers(phospho, peptides, proteins)),
     tar_target(upset_pho_pep_pro, set_comparison(phospho, peptides, proteins)),
-    tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.95) %>% pull(id) %>% unique() %>% length()),
+    tar_target(n_good_phospho, prepare_phospho_counts(phospho, loc_prob_limit = 0.75) %>% pull(id) %>% unique() %>% length()),
     tar_target(phospho_dup_example, duplicate_example(peptides, phospho, 74)),
     tar_target(n_dup_removed, n_duplicates(phospho$duplicates))
   )
@@ -73,7 +72,7 @@ targets_main <- function() {
   figures <- list(
     tar_target(upset_reporters, upset_phospho_orders_overlap(phospho_rep)),
     tar_target(fig_phorep_1, plot_phospho_orders(phospho_rep, 1)),
-    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, pho_id = "23999", pho_multi = "1")),
+    tar_target(fig_prot_norm_problem, plot_phospho_norm(phospho, proteins, pho_id = 23999, pho_multi = 1)),
     tar_target(fig_pho_per_pep, plot_phospho_per_peptide(peptides, phospho)),
     tar_target(fig_pho_pro_cor, plot_pho_prot_cor(phospho, proteins)),
     tar_target(fig_pho_dups, plot_duplications(phospho$duplicates)),
