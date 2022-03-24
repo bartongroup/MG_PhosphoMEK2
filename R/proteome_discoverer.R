@@ -84,11 +84,11 @@ parse_descriptions <- function(d) {
     mutate(gene = str_extract(rest, "GN=(\\w+)") %>% str_remove("GN=")) %>% 
     select(-rest) %>% 
     group_by(id) %>% 
-    summarise(description = str_c(prot, collapse=";"), gene = str_c(gene, collapse=";"), uniprot = first(uniprot)) %>% 
+    summarise(description = str_c(prot, collapse = ";"), gene = str_c(gene, collapse = ";"), uniprot = first(uniprot)) %>% 
     select(-id)
   d %>% 
     select(-description) %>% 
-    left_join(desc, by="uniprot")
+    left_join(desc, by = "uniprot")
 }
 
 get_peptides <- function(mraw) {
@@ -111,12 +111,12 @@ normalise_peptides <- function(pep, prot, pep_info) {
     select(sequence, uniprot) %>% 
     distinct()
   abu <- pep$abu %>% 
-    left_join(pp, by="sequence") %>% 
-    left_join(prot$abu %>% rename(prot_abu_norm = abundance_norm, prot_abu = abundance), by=c("uniprot"="accession", "condition", "replicate")) %>% 
+    left_join(pp, by = "sequence") %>% 
+    left_join(prot$abu %>% rename(prot_abu_norm = abundance_norm, prot_abu = abundance), by = c("uniprot" = "accession", "condition", "replicate")) %>% 
     drop_na() %>% 
     mutate(abundance_protnorm = mean(prot_abu_norm) * abundance_norm / prot_abu_norm)
   tab <- abu %>% 
-    pivot_wider(id_cols=c("sequence", "modifications"), names_from = c("condition", "replicate"), values_from = "abundance_protnorm")
+    pivot_wider(id_cols = c("sequence", "modifications"), names_from = c("condition", "replicate"), values_from = "abundance_protnorm")
   
   pep$abu = abu
   pep$tab_protnorm = tab
@@ -131,21 +131,21 @@ capital_mod <- function(s, pos) {
 
 pad_sequences <- function(sl) {
   mx <- max(sl$position)
-  ss <- rep("-", mx) %>% str_c(collapse="")
+  ss <- rep("-", mx) %>% str_c(collapse = "")
   sl %>% 
     mutate(n_pad = max(position) - position) %>% 
     mutate(pad = str_sub(ss, 1, n_pad)) %>% 
-    unite(sequence, c(pad, sequence), sep="")
+    unite(sequence, c(pad, sequence), sep = "")
 }
 
 
 make_seq_list <- function(seqmod, pep_info) {
   seqmod %>% 
     select(c(sequence, modifications)) %>% 
-    left_join(pep_info, by=c("sequence", "modifications")) %>% 
+    left_join(pep_info, by = c("sequence", "modifications")) %>% 
     filter(position > 0) %>% 
     mutate(sequence = capital_mod(sequence, position)) %>% 
-    unite(label, c(uniprot, residue, position), remove=FALSE) %>% 
+    unite(label, c(uniprot, residue, position), remove = FALSE) %>% 
     mutate(label = str_remove_all(label, "\\s")) %>% 
     select(sequence, label, residue, position) %>% 
     pad_sequences()
@@ -155,7 +155,7 @@ write_seq_list <- function(sl, file) {
   seqinr::write.fasta(sl$sequence %>% str_split(""), sl$label, file)
 }
 
-make_pep_parse_example <- function(pepinf, seed=123, n=10) {
+make_pep_parse_example <- function(pepinf, seed = 123, n = 10) {
   set.seed(seed)
   seqs <- pepinf$sequence %>%
     unique() %>% 
@@ -170,7 +170,7 @@ process_pd_data <- function(raw, meta) {
     select(peptide_id, contains("Abundance Ratios (log2)")) %>% 
     set_names("peptide_id", paste0("ratio_", unique(meta$replicate))) %>% 
     pivot_longer(
-      cols=-peptide_id,
+      cols = -peptide_id,
       names_to = c("group", "replicate"),
       values_to = "ratio",
       names_sep = "_"      
@@ -181,7 +181,7 @@ process_pd_data <- function(raw, meta) {
     set_names("peptide_id", meta$sample)
   
   abu_tab_norm <- raw %>% 
-    select(peptide_id, contains("Abundances (Normalized)") )%>% 
+    select(peptide_id, contains("Abundances (Normalized)")) %>% 
     set_names("peptide_id", meta$sample)
   
   abu <- abu_tab %>% 
@@ -201,12 +201,12 @@ process_pd_data <- function(raw, meta) {
     )
   
   
-  abu <- abu %>% full_join(abu_norm, by=c("peptide_id", "group", "replicate")) %>% 
-    unite("sample", group, replicate, sep="-", remove=FALSE) %>% 
-    mutate(sample = factor(sample, levels=meta$sample), group = factor(group, levels=levels(meta$group))) %>% 
+  abu <- abu %>% full_join(abu_norm, by = c("peptide_id", "group", "replicate")) %>% 
+    unite("sample", group, replicate, sep = "-", remove = FALSE) %>% 
+    mutate(sample = factor(sample, levels = meta$sample), group = factor(group, levels = levels(meta$group))) %>% 
     mutate(replicate = as.integer(replicate))
   
-  list(abu=abu, rat=abu_rat, tab=abu_tab, tab_norm=abu_tab_norm, metadata=meta)
+  list(abu = abu, rat = abu_rat, tab = abu_tab, tab_norm = abu_tab_norm, metadata = meta)
 }
 
 read_and_process_pd_data <- function(file, meta) {
