@@ -38,6 +38,7 @@ limma_de <- function(set, formula = "~ 0 + condition", info_cols = NULL, what = 
     topTable(fit, coef = cf, number = 1e6, sort.by = "none") %>%
       as_tibble(rownames = "mid") %>%
       separate(mid, c("id", "multi"), sep = "-") %>%
+      mutate(across(c(id, multi), as.integer)) %>% 
       mutate(contrast = cf) %>%
       rename(FDR = adj.P.Val, PValue = P.Value) %>%
       select(-c(t, B))

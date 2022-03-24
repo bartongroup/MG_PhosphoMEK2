@@ -23,9 +23,10 @@ read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
     mutate(value = na_if(value, 0)) %>%
     left_join(mr, by = "column_name") %>%
     select(id, multi, sample, value) %>%
-    mutate(multi = multi %>% as.character())
+    mutate(across(c(id, multi), as.integer))
   info <- raw %>%
-    select(-all_of(mr$column_name))
+    select(-all_of(mr$column_name)) %>% 
+    mutate(id = as.integer(id))
 
   set <- list(
     info = info,
@@ -119,11 +120,13 @@ pho_pro_match <- function(pho, pro) {
   pho2pro <- pho$info %>%
     select(phospho_id = id, protein_id = protein_ids) %>%
     separate_rows(protein_id, sep = ";") %>%
+    mutate(protein_id = as.integer(protein_id)) %>% 
     distinct()
 
   pro2pho <- pro$info %>%
     select(protein_id = id, phospho_id = phospho_ids) %>%
     separate_rows(phospho_id, sep = ";") %>%
+    mutate(phospho_id = as.integer(phospho_id)) %>%
     distinct()
 
   bind_rows(pho2pro, pro2pho) %>%
@@ -207,7 +210,8 @@ normalise_constand <- function(set) {
   dn <- tab_norm %>%
     as_tibble(rownames = "mid") %>%
     separate(mid, c("id", "multi"), sep = "-") %>%
-    pivot_longer(-c(id, multi), names_to = "sample", values_to = "value_constand")
+    pivot_longer(-c(id, multi), names_to = "sample", values_to = "value_constand") %>% 
+    mutate(across(c(id, multi), as.integer))
   set$dat <- set$dat %>%
     left_join(dn, by = c("id", "multi", "sample"))
   set
@@ -229,7 +233,8 @@ normalise_to_proteins <- function(pho, pro) {
   # here we ignore a handful of phospho sites that a linked to multiple protein groups
   pho$phospho2prot <- pho$info %>%
     select(id, protein_id = protein_ids) %>%
-    filter(!str_detect(protein_id, ";"))
+    filter(!str_detect(protein_id, ";")) %>% 
+    mutate(protein_id = as.integer(protein_id))
   # mean protein abundance across conditions
   mp <- pro$dat %>%
     drop_na() %>%
