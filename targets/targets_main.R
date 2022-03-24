@@ -94,6 +94,11 @@ targets_main <- function() {
     tar_target(sav_de, tab_de_median %>% write_tsv("tab/phospho_de.tsv"))
   )
 
+  pd_comparison <- list(
+    tar_target(pd, read_and_process_pd_data(PROTEOME_DISCOVERER_FILE, metadata)),
+    tar_target(pd_mq, map_mq_pd(phospho$info, pd$info))
+  )
+  
   c(
     biomart,
     read_data,
@@ -105,7 +110,8 @@ targets_main <- function() {
     figures,
     figures_pairs,
     shiny,
-    tables
+    tables,
+    pd_comparison
   )
 
 }

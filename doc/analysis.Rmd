@@ -41,7 +41,7 @@ library(DT)
 
 ```{r functions}
 myDT <- function(d) {
-  datatable(d, class="table-condensed table-striped table-bordered", style="bootstrap") %>% 
+  datatable(d, class = "table-condensed table-striped table-bordered", style = "bootstrap") %>% 
     formatStyle(columns = colnames(d), fontSize = '90%')
 }
 N <- function(n) prettyNum(n, big.mark = ",")
@@ -61,10 +61,10 @@ We collected a total of five biological replicates (NMPs generated in independen
 
 We would like to explore this dataset with the DAG in the following ways:
 
- - Re-analyse the data to determine how the p-values and adjusted p-values were generated. It seems likely that a small number of changes are taking place during this short exposure to the MEK inhibitor. We wonder whether an appropriate form of multiple testing correction has been used, which is not so conservative as to mask underlying biology in this context?
- - Explore other ways of analysing the data. Is there an outlying replicate(s) that masks significant changes?
- - Identify datasets for further mining, such as analysis for GO terms, so we can generate predictions of changes in cellular processes triggered by acute MEK inhibition.
- - In the longer term, when the total proteome data for these replicates is available, we would like to normalise against this to ensure that changes in phosphorylation are not attributable to changes in protein abundance.
+-   Re-analyse the data to determine how the p-values and adjusted p-values were generated. It seems likely that a small number of changes are taking place during this short exposure to the MEK inhibitor. We wonder whether an appropriate form of multiple testing correction has been used, which is not so conservative as to mask underlying biology in this context?
+-   Explore other ways of analysing the data. Is there an outlying replicate(s) that masks significant changes?
+-   Identify datasets for further mining, such as analysis for GO terms, so we can generate predictions of changes in cellular processes triggered by acute MEK inhibition.
+-   In the longer term, when the total proteome data for these replicates is available, we would like to normalise against this to ensure that changes in phosphorylation are not attributable to changes in protein abundance.
 
 ## Data
 
@@ -80,7 +80,7 @@ Modifications in the phosphosite files are provided explicitly, with the amino a
 
 We filter all data by removing reverse and potential contaminants. Also we filter `Razor + unique peptides > 2` for proteins and `Localization prob > 0.75` for phospho sites.
 
-We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition. 
+We detect the following numbers of phospo sites, peptides and proteins. Detection means we have non-zero abundance in all replicates in at least one condition.
 
 ```{r detect}
 tar_load(quants)
@@ -90,7 +90,6 @@ flextable(quants)
 ## Experiment
 
 Our experimental setup is simple. We have two conditions in five replicates each, distributed across ten TMT reporters.
-
 
 ```{r meta}
 tar_read(metadata) %>% flextable()
@@ -225,6 +224,7 @@ d %>%
   DT::datatable(rownames = FALSE) %>% 
   DT::formatStyle(columns = colnames(d), fontSize = '80%')
 ```
+
 <br>
 
 Here is a visual overview of significant sites. The figure shows protein abundance vs. phospho site abundance. Where protein data are not available, it is replaced with zero. We see that quite a few sites are linked to proteins with no detection. If we used normalisation to the total proteome, these sites would be missing.
@@ -239,10 +239,27 @@ Heatmap (hierarchical clustering of rows and columns) of significant sites.
 tar_read(fig_de_heatmap)
 ```
 
+### STRINGdb
+
+STRINGdb is a database of functional associations between proteins. These can be both physical interactions and other associations. We apply this to proteins with DE sites. STRINGdb found the following clusters of proteins:
+
+#### Sites going up
+
+```{r string_up, out.width="80%"}
+knitr::include_graphics("../fig/sdb_up.png")
+```
+
+#### Sites going down
+
+```{r string_down, out.width="80%"}
+knitr::include_graphics("../fig/sdb_down.png")
+```
+
+
 ## Resources
 
- - [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/de/)
- - [Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek2/tab/phospho_de.tsv)
+-   [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/de/)
+-   [Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek2/tab/phospho_de.tsv)
 
 ## Session info
 

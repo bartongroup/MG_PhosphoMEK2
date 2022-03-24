@@ -151,3 +151,5 @@ NORM_COND <- tidyr::expand_grid(NORMALISATIONS, CONDITIONS) |>
 
 FDR_LIMIT <- 0.05
 LOGFC_LIMIT <- 0
+
+PROTEOME_DISCOVERER_FILE <- "pd_data/NMP-Quantified phosphophoproteome-TMT10plex.xlsx"
