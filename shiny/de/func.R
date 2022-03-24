@@ -140,6 +140,7 @@ sh_get_all_phosphos <- function(pep, pho, peptide_id) {
     select(peptide_id = id, phospho_ids, sequence, start_position, end_position) %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
     rename(phospho_id = phospho_ids) %>% 
+    mutate(phospho_id = as.integer(phospho_id)) %>% 
     left_join(pho$info %>% select(phospho_id = id, peptide_ids, protein, gene_name, localization_prob, amino_acid, position), by = "phospho_id") %>% 
     mutate(position_in_peptide = position - start_position + 1) %>% 
     mutate(sequence_pho = sh_mark_position(sequence, position_in_peptide))
@@ -184,7 +185,7 @@ sh_plot_pepseq <- function(pep, pho, de, pho_sel) {
       plot.title = element_text(hjust = 0.5),
       plot.background = element_rect(fill = alpha("lightgoldenrod1", 0.3), colour = NA)
     ) +
-    geom_col(position = position_dodge(), aes(fill = multi, colour = factor(FDR < 0.05, levels = c(FALSE, TRUE)))) +
+    geom_col(position = position_dodge(), aes(fill = as.factor(multi), colour = factor(FDR < 0.05, levels = c(FALSE, TRUE)))) +
     geom_hline(yintercept = 0, size = 2, colour = "grey50", alpha = 0.2) +
     geom_text(data = txt %>% filter(!this_one), aes(x = pos, y = 0, label = aa), size = 5, colour = "black") +
     geom_text(data = txt %>% filter(this_one), aes(x = pos, y = 0, label = aa), size = 8, colour = "red") +
@@ -202,6 +203,7 @@ sh_plot_full_protein <- function(de, pro, pro_id, pho_sel, cntr) {
   if (nrow(this_pro) > 1) this_pro = this_pro[1, ]
   d <- this_pro %>% 
     separate_rows(phospho_ids, sep = ";") %>% 
+    mutate(phospho_ids = as.integer(phospho_ids)) %>% 
     select(id = phospho_ids, sequence_length) %>% 
     left_join(de, by = "id") %>% 
     filter(!is.na(logFC) & contrast == cntr)
@@ -211,7 +213,7 @@ sh_plot_full_protein <- function(de, pro, pro_id, pho_sel, cntr) {
       legend.position = "none",
       panel.grid = element_blank()
     ) +
-    geom_segment(aes(xend = position, yend = 0, colour = multi)) +
+    geom_segment(aes(xend = position, yend = 0, colour = as.factor(multi))) +
     geom_point(size = 2, shape = 21, colour = "grey60") +
     geom_point(data = d %>% right_join(pho_sel, by = c("id", "multi")), colour = "red", size = 3) +
     geom_hline(yintercept = 0) +
@@ -224,7 +226,7 @@ sh_plot_full_protein <- function(de, pro, pro_id, pho_sel, cntr) {
 
 
 sh_plot_intensities <- function(set, sel, what = "value_med", log_scale = TRUE, tit = NULL) {
-  if ("character" %in% class(sel)) sel <- tibble(id = sel, multi = "1")
+  if ("integer" %in% class(sel)) sel <- tibble(id = sel, multi = 1)
   dat <- set$dat %>% 
     right_join(sel, by = c("id", "multi")) %>% 
     mutate(val = get(what)) %>% 
