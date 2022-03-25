@@ -96,7 +96,8 @@ targets_main <- function() {
 
   pd_comparison <- list(
     tar_target(pd, read_and_process_pd_data(PROTEOME_DISCOVERER_FILE, metadata)),
-    tar_target(pd_mq, map_mq_pd(phospho$info, pd$info))
+    tar_target(pd_mq, map_mq_pd(phospho$info, pd$info)),
+    tar_target(pd_mq_comp, plot_pd_mq_comparison(pd, phospho, peptides, pd_mq, c("Q9UPT8:S1269", "Q9UPT8:S1275")))
   )
   
   c(

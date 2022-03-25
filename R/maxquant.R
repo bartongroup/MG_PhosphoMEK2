@@ -32,7 +32,7 @@ read_mq <- function(file, data_cols, measure_cols, id_cols, filt, meta) {
 # For testing
 read_phospho_reporters <- function(file) {
   rep_cols <- expand_grid(reporter = REPORTERS, order = 1:3) %>%
-    mutate(column_name = glue::glue("Reporter intensity corrected {reporter}___{order}") %>% as.character())
+    mutate(column_name = str_glue("Reporter intensity corrected {reporter}___{order}") %>% as.character())
   read_tsv(file, col_select = c("id", rep_cols$column_name), show_col_types = FALSE) %>%
     pivot_longer(-id, names_to = "column_name") %>%
     left_join(rep_cols, by = "column_name")

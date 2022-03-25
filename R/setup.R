@@ -50,7 +50,7 @@ PROTEINS_ID_COLUMNS <- c("id")
 PROTEINS_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
   multi = 1,
-  column_name = glue::glue("Reporter intensity corrected {reporter} Total") |> as.character()
+  column_name = stringr::str_glue("Reporter intensity corrected {reporter} Total") |> as.character()
 )
 
 KEEP_PROTEINS_COLUMNS <- c("peptide_ids", "phospho_ids", "protein", "gene_name")
@@ -83,7 +83,7 @@ PEPTIDES_ID_COLUMNS <- c("id")
 PEPTIDES_MEASURE_COLUMNS <- tibble::tibble(
   reporter = REPORTERS,
   multi = 1,
-  column_name = glue::glue("Reporter intensity corrected {reporter}") |> as.character()
+  column_name = stringr::str_glue("Reporter intensity corrected {reporter}") |> as.character()
 )
 
 KEEP_PEPTIDES_COLUMNS <- c("phospho_ids", "protein", "gene_name")
@@ -127,7 +127,7 @@ PHOSPHO_MEASURE_COLUMNS <- tidyr::expand_grid(
   reporter = REPORTERS,
   multi = MULTI
 ) |>
-  dplyr::mutate(column_name = glue::glue("Reporter intensity corrected {reporter}___{multi}") |> as.character())
+  dplyr::mutate(column_name = stringr::str_glue("Reporter intensity corrected {reporter}___{multi}") |> as.character())
 
 PHOSPHO_FILTER <- "localization_prob > 0.75 & !(reverse %in% '+') & !(contaminant %in% '+')"
 
@@ -153,3 +153,5 @@ FDR_LIMIT <- 0.05
 LOGFC_LIMIT <- 0
 
 PROTEOME_DISCOVERER_FILE <- "pd_data/NMP-Quantified phosphophoproteome-TMT10plex.xlsx"
+
+PD_MQ_EXAMPLE <- "Q9UPT8:S1269"

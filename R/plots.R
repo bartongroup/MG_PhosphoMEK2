@@ -114,9 +114,9 @@ plot_volcano <- function(res, fc = "logFC", p = "PValue", fdr = "FDR",
     geom_point(size = point_size, alpha = point_alpha) +
     scale_colour_manual(values = c("grey70", "black")) +
     scale_y_continuous(expand = expansion(mult = c(0, 0.03))) +
-    facet_grid(as.formula(glue::glue(". ~ {groupvar}"))) +
+    facet_grid(as.formula(str_glue(". ~ {groupvar}"))) +
     theme(legend.position = "none") +
-    labs(x = fc, y = glue::glue("-log10({p})"))
+    labs(x = fc, y = str_glue("-log10({p})"))
 }
 
 plot_ma <- function(res, fc = "logFC", sm = "AveExpr", fdr = "FDR",
@@ -131,7 +131,7 @@ plot_ma <- function(res, fc = "logFC", sm = "AveExpr", fdr = "FDR",
     geom_hline(yintercept = 0, colour = "brown") +
     geom_point(size = point_size, alpha = point_alpha) +
     scale_colour_manual(values = c("grey70", "black")) +
-    facet_grid(as.formula(glue::glue(". ~ {groupvar}"))) +
+    facet_grid(as.formula(str_glue(". ~ {groupvar}"))) +
     theme(legend.position = "none")
   if (!is.null(sel_genes)) {
     g <- g +
@@ -188,7 +188,7 @@ plot_phospho_intensities <- function(pho, pho_id, what = "value_med", log_scale 
     sq <- sqw[pw == "P"] %>%
       str_c(collapse = "") %>%
       mark_position(pho_info$position_in_peptide)
-    tit <- glue::glue("{sq}:{pho_info$position} {pho_info$gene_name}")
+    tit <- str_glue("{sq}:{pho_info$position} {pho_info$gene_name}")
   }
 
   ggplot(pho_dat, aes(x = condition, y = val, colour = replicate)) +
@@ -304,7 +304,7 @@ plot_full_protein <- function(de, pro, pro_id, cntr) {
     geom_hline(yintercept = 0) +
     scale_colour_manual(values = c("grey80", "black")) +
     scale_x_continuous(expand = c(0, 0), limits = c(0, this_pro$sequence_length)) +
-    labs(x = "Position", y = expression(log[2]~FC), title = glue::glue("{this_pro$protein} : {this_pro$gene_name}"))
+    labs(x = "Position", y = expression(log[2]~FC), title = str_glue("{this_pro$protein} : {this_pro$gene_name}"))
 }
 
 upset_phospho_orders_overlap <- function(pr) {

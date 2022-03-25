@@ -116,6 +116,7 @@ They are all very close on the protein. Perhaps this is how enrichment works - p
 
 To avoid problems with differential abundance duplicates are removed, leaving the first one out of each group. `r N(tar_read(n_dup_removed))` phospho sites were removed by this process.
 
+
 ### Abundance distribution
 
 The plot shows distribution of normalised phosphosite abundance, normalised to median:
@@ -195,6 +196,53 @@ tar_read(fig_volcano_prot)
 ```
 
 We decide not to use total proteome for normalisation, instead we normalise phospho sites to the median across each sample.
+
+## Comparison to PD
+
+```{r pd_mq_comp}
+tar_load(pd_mq_comp)
+```
+
+In PD output there are multiple close sites quantified together, for example `Q9UPT8 2xPhospho [S1269(99.9); S1275(100)]` corresponds to one row of measurements, but refers to two close sites. 
+
+The relation between phospho sites, their quantification, peptides and proteins is complex. Have a look at this example. We ave a these two close phospho sites `Q9UPT8:S1269` and `Q9UPT8:S1275`. Proteome Discoverer provides 6 measurements with 6 different modification states of the peptide:
+
+```{r pd_example_pd}
+pd_mq_comp$pd_info %>% 
+  select(peptide_id, sequence, modifications, modifications_prot, gene) %>%
+  flextable() %>% 
+  width(j = "modifications", width = 3) %>% 
+  width(j = "modifications_prot", width = 3) 
+```
+
+4 of these measurements include S1269, 4 include S1275 and 3 include both.
+
+In MaxQuant there are two sites, with four corresponding peptides each and two multiplicity measurements.
+
+```{r pd_example_mq}
+pd_mq_comp$mq_info %>%
+  select(id, peptide_ids, proteins, gene_name, sequence_window, position) %>% 
+  flextable()
+```
+
+This table shows the MaxQuant peptide annotations:
+
+```{r pd_example_pep}
+pd_mq_comp$pep_info %>% 
+  select(id, sequence, protein, gene_name, start_position, end_position) %>% 
+  flextable()
+```
+
+W see these are the same four sequences as identified with PD.
+
+Here is a comparison of intensities from both data sets:
+
+```{r pd_example_plot, fig.width=9, fig.height=4}
+pd_mq_comp$plot
+```
+
+So, for this one particular phospho site (with its very close neighbour), if we use both MaxQuant and PD, we have 8 different measurements in each sample. Sigh.
+
 
 ## Differential abundance
 

@@ -6,17 +6,17 @@ parse_sites <- function(sites) {
     str_remove("\\s") %>% 
     map_dfr(function(x) {
       if (!str_detect(x, "\\(")) {
-        x <- x %>% str_remove("\\[") %>% str_remove("\\]")
-        return(tibble(modification = x, residue = x, position = NA_real_, prob = NA_real_))
+        #x <- x %>% str_remove("\\[") %>% str_remove("\\]")
+        return(c(residue = x, position = NA_character_, prob = NA_character_))
       }
-      str_remove(x, "\\)") %>% 
-        str_split("\\(", simplify = TRUE) %>%
-        magrittr::set_colnames(c("modification", "prob")) %>%
-        as_tibble() %>% 
-        separate(modification, into = c("residue", "position"), sep = 1, remove = TRUE) %>% 
-        mutate_at(c("position", "prob"), as.numeric)
+      # split into residue, position and probability
+      v <- str_extract_all(x, "^[A-Z]|[\\d\\.]+", simplify = TRUE) %>%
+        as.vector()
+      names(v) <- c("residue", "position", "prob")
+      v
     }) 
 }
+
 
 # Parse modifications string
 # Returns tibble with residue, pos and prob
@@ -38,12 +38,11 @@ parse_prot_mod <- function(s) {
       str_extract(x, "(?<=(Phospho\\s\\[))[\\w\\.\\;\\(\\)\\s\\/]+(?=(\\]))") %>%    # extract from Phospho [...]  
         parse_sites() %>% 
         add_column(protein = prot) %>% 
-        mutate(prot_position = glue::glue("{protein}:{residue}{position}"))
+        mutate(prot_position = str_glue("{protein}:{residue}{position}"))
     }) %>% 
     filter(!is.na(position)) %>%
-    summarise(prot_positions = list(prot_position))
+    summarise(prot_positions = list(prot_position), multi = n())
 }
-
 
 merge_mod_info <- function(mds) {
   mds %>% 
@@ -226,7 +225,7 @@ map_mq_pd <- function(mq_info, pd_info) {
   mq_pos <- mq_info %>%
     select(id, protein, amino_acid, position) %>%
     mutate(protein = str_remove(protein, "\\-\\d+")) %>% 
-    mutate(prot_position = glue::glue("{protein}:{amino_acid}{position}")) %>% 
+    mutate(prot_position = str_glue("{protein}:{amino_acid}{position}")) %>% 
     select(mq_id = id, prot_position)
   pd_pos <- pd_info %>% 
     select(pd_id = peptide_id, prot_position = prot_positions) %>% 
