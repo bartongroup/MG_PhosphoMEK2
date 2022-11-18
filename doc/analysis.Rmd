@@ -192,7 +192,7 @@ tar_read(fig_prot_norm_problem)
 We performed differential abundance on proteins (intensities normalised to the median). No significant proteins were found.
 
 ```{r prot_volcano, fig.width=4, fig.height=4}
-tar_read(fig_volcano_prot)
+tar_read(fig_volcano_prot) 
 ```
 
 We decide not to use total proteome for normalisation, instead we normalise phospho sites to the median across each sample.
@@ -261,7 +261,7 @@ For more information see [Ritchie et al. 2015](https://academic.oup.com/nar/arti
 ### Results
 
 ```{r fig_pep_volcano, fig.width=4, fig.height=4}
-tar_read(fig_volcano_median)
+tar_read(fig_volcano_median) 
 tar_read(fig_ma_median)
 ```
 
@@ -284,7 +284,7 @@ tar_read(fig_pho_vs_pro_median)
 Heatmap (hierarchical clustering of rows and columns) of significant sites.
 
 ```{r de_heatmap, fig.width=8, fig.height=15}
-tar_read(fig_de_heatmap)
+tar_read(fig_de_heatmap) 
 ```
 
 ### STRINGdb

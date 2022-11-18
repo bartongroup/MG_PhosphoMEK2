@@ -409,7 +409,7 @@ plot_de_heatmap <- function(set, sites, what = "value_med", max.scale = NULL) {
     left_join(select(set$info, id, gene_name), by = "id") %>%
     unite("gid", gene_name, id, multi, sep = "-") %>%
     column_to_rownames("gid")
-  ggheatmap(mat, legend.name = expression(log[2]~FC), with.y.text = TRUE)
+  ggheatmap(mat, legend.name = expression(log[2]~FC), with.y.text = TRUE, order.col = FALSE)
 }
 
 plot_duplications <- function(dup) {

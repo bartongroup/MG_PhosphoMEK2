@@ -34,7 +34,7 @@ targets_main <- function() {
   proteins <- list(
     tar_target(peptide_de, limma_de(peptides, info_cols = KEEP_PEPTIDES_COLUMNS, what = "value_med", log_scale = TRUE)),
     tar_target(protein_de, limma_de(proteins, info_cols = KEEP_PROTEINS_COLUMNS, what = "value_med", log_scale = TRUE)),
-    tar_target(fig_volcano_prot, plot_volcano(protein_de)),
+    tar_target(fig_volcano_prot, plot_volcano(protein_de) + scale_y_continuous(expand = c(0, 0), limits = c(0, 10))),
 
     tar_target(tab_pho_pro, pho_pro_match(phospho, proteins)),
     tar_target(tabs_prot_count, protein_count(tab_pho_pro))
@@ -45,7 +45,7 @@ targets_main <- function() {
     names = NAME,
 
     tar_target(phospho_de, limma_de(phospho, info_cols = KEEP_PHOSPHO_COLUMNS, what = WHAT, log_scale = LOG, loc_prob_limit = 0.75)),
-    tar_target(fig_volcano, plot_volcano(phospho_de, logfc_limit = LOGFC_LIMIT, fdr_limit = FDR_LIMIT)),
+    tar_target(fig_volcano, plot_volcano(phospho_de, logfc_limit = LOGFC_LIMIT, fdr_limit = FDR_LIMIT) + scale_y_continuous(expand = c(0, 0), limits = c(0, 10))),
     tar_target(fig_ma, plot_ma(phospho_de, logfc_limit = LOGFC_LIMIT, fdr_limit = FDR_LIMIT)),
     tar_target(fig_up_down, plot_up_down(phospho_de, logfc_limit = LOGFC_LIMIT, fdr_limit = FDR_LIMIT)),
     tar_target(fig_sample_dist, plot_sample_distirbutions(phospho, WHAT, log_scale = LOG, ncol = 5)),
