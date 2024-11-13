@@ -1,1 +1,1 @@
-rsync -rvm shiny/* rstudio:/homes/gjb-shiny-x/shiny/private/marek_phosphomek2
+rsync -rvm shiny/* shiny:/cluster/gjb_lab/mgierlinski/ShinyApps/private/phosphomek2
