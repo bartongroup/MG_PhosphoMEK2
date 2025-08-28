@@ -1,13 +1,30 @@
 ---
 title: "Phosphoproteomics of ERK1/2 regulation of neural differentiation (second analysis)"
-author: "Marek Gierlinski"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
-output:
-  html_document:
+author:
+  - name: Marek Gierlinski
+    affiliations: Data Analysis Group
+    note: "Creator of this report"
+  - name: Elisenda Raga Gil
+    affiliation: Developmental Biology
+  - name: Kate Storey
+    affiliation: Developmental Biology
+date: today
+date-format: "D MMMM YYYY"
+execute:
+  echo: false
+  cache: true
+  warning: false
+format:
+  html:
     theme:
-      bootswatch: journal
-      primary: "#2fa4e7"
+      - journal
+      - report.scss
+    toc: true
+    number-sections: true
+editor: source
+self-contained: true
 ---
+
 
 ```{css css_options, echo=FALSE}
 pre code, pre, code {
@@ -49,7 +66,6 @@ N <- function(n) prettyNum(n, big.mark = ",")
 
 Collaborators: Elisenda Raga Gil, Frederic Lamoliatte, Kate Storey
 
-#  {.tabset}
 
 ## Proposal
 
@@ -306,7 +322,7 @@ knitr::include_graphics("../fig/sdb_down.png")
 
 ## Resources
 
--   [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/private//marek_phosphomek2/de/)
+-   [Interactive data explorer](https://shiny.compbio.dundee.ac.uk/mgierlinski/public/phosphomek2/de)
 -   [Download DE results](http://www.compbio.dundee.ac.uk/user/mgierlinski/phosphomek2/tab/phospho_de.tsv)
 
 ## Session info

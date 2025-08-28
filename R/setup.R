@@ -4,7 +4,7 @@
 TAXONOMY_ID <- 9606
 KEGG_SPECIES <- "hsa"
 ENSEMBL_DATASET <- "hsapiens_gene_ensembl"
-ENSEMBL_VERSION <- "105"
+ENSEMBL_VERSION <- "114"
 
 REPORTERS <- 1:10
 
