@@ -1,6 +1,9 @@
 # Phosphoproteomics of ERK1/2 regulation of neural differentiation (second analysis)
 
+Software used for phosphoproteomics analysis in the manuscript (soon to be published).
+
 **Maintainer**: Marek Gierlinski
+
 **Collaborators**: Elisenda Raga Gil, Kate Storey
 
 ## Usage
