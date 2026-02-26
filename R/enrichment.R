@@ -148,3 +148,87 @@ select_star_go <- function(se, bm_go, terms) {
     filter(term_id %in% terms) %>%
     inner_join(se, by = "gene_name")
 }
+
+
+########
+
+DESIGNATIONS <-  list(
+    go = "goa_human",
+    re = "Homo sapiens",
+    kg = "hsa"
+)
+
+EXPERIMENTAL_GO_CODES <- c("EXP", "IDA", "IPI", "IMP", "IGI", "IEP", "HTP", "HDA", "HMP", "HGI", "HEP")
+
+#' Get Functional Terms using Gene Symbols
+#'
+#' This function retrieves functional terms (GO, Reactome, and KEGG) for a given set of gene symbols and IDs.
+#' It filters GO terms to only include those with experimental evidence codes.
+#'
+#' @param designations A list containing species designations for GO, Reactome, and KEGG.
+#' @param codes A character vector of GO evidence codes to filter by (default is EXPERIMENTAL_GO_CODES).
+#'
+#' @return A list containing GO, Reactome, and KEGG terms and mappings.
+get_functional_terms_sym <- function(designations = DESIGNATIONS, codes = EXPERIMENTAL_GO_CODES) {
+  
+  cat("Loading GO term data\n")
+  go <- fenr::fetch_go(species = designations$go, use_cache = TRUE)
+  cat("Loading Reactome data\n")
+  re <- fenr::fetch_reactome(species = designations$re)
+  cat("Loading KEGG data\n")
+  kg <- fenr::fetch_kegg(species = designations$kg)
+
+  # Older version of fenr (<1.4.2) does not return evidence column. In such case do no filtering.
+  if(is.null(go$mapping[["evidence"]])) {
+    go$mapping$evidence <- "none"
+    codes <- "none"
+  }
+
+  go_cc <- go
+  go_bp <- go
+  go_mf <- go
+
+  go_cc$terms <- go_cc$terms |> 
+    filter(namespace == "cellular_component")
+  go_bp$terms <- go_bp$terms |> 
+    filter(namespace == "biological_process")
+  go_mf$terms <- go_mf$terms |> 
+    filter(namespace == "molecular_function")
+
+
+  # Filter non-existent terms and only experimental codes
+  go_cc$mapping <- go_cc$mapping |> 
+    drop_na() |>
+    filter(term_id %in% go_cc$terms$term_id & evidence %in% codes)
+  go_bp$mapping <- go_bp$mapping |> 
+    drop_na() |>
+    filter(term_id %in% go_bp$terms$term_id & evidence %in% codes)
+  go_mf$mapping <- go_mf$mapping |> 
+    drop_na() |>
+    filter(term_id %in% go_mf$terms$term_id & evidence %in% codes)
+
+  re$mapping <- re$mapping
+
+  kg$mapping <- kg$mapping
+
+
+  list(
+    go_cc = go_cc,
+    go_bp = go_bp,
+    go_mf = go_mf,
+    re = re,
+    kg = kg
+  )
+}
+
+
+
+prepare_terms_fenr <- function(terms, all_features = NULL, feature_name = "gene_symbol") {
+  ontologies <- names(terms)
+
+  map(ontologies, function(ont) {
+    trm <- terms[[ont]]
+    fenr::prepare_for_enrichment(trm$terms, trm$mapping, all_features, feature_name)
+  }) |>
+    set_names(ontologies)
+}

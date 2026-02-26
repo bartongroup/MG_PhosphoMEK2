@@ -1,4 +1,4 @@
-shiny_data_de <- function(phospho, peptides, proteins, phospho_de, bm_genes, terms) {
+shiny_data_de <- function(phospho, peptides, proteins, phospho_de, bm_genes, fterms) {
   pho2pep <- phospho$info %>%
     select(id, peptide_ids) %>%
     separate_rows(peptide_ids, sep = ";") %>% 
@@ -24,9 +24,11 @@ shiny_data_de <- function(phospho, peptides, proteins, phospho_de, bm_genes, ter
     pep = peptides,
     pro = proteins,
     de = phospho_de,
-    go = terms$go,
-    reactome = terms$re,
-    kegg = terms$kg,
+    go_cc = fterms$go_cc,
+    go_bp = fterms$go_bp,
+    go_mf = fterms$go_mf,
+    reactome = fterms$re,
+    kegg = fterms$kg,
     pho2pep = pho2pep,
     pho2pro = pho2pro,
     pho2gene = pho2gene,

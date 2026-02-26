@@ -3,11 +3,13 @@ targets_main <- function() {
   biomart <- list(
     tar_target(mart, useEnsembl(biomart = "ensembl", dataset = ENSEMBL_DATASET, version = ENSEMBL_VERSION)),
     tar_target(bm_genes, biomart_fetch_genes(mart)),
-    tar_target(go_terms,  bm_fetch_go(mart, phospho_genes)),
-    tar_target(gs_terms,  bm_fetch_go(mart, phospho_genes, slim = TRUE)),
-    tar_target(re_terms, fetch_reactome(mart, phospho_genes)),
-    tar_target(kg_terms, get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes)),
-    tar_target(all_terms, list(go = go_terms, gs = gs_terms, re = re_terms, kg = kg_terms))
+    #tar_target(go_terms,  bm_fetch_go(mart, phospho_genes)),
+    #tar_target(gs_terms,  bm_fetch_go(mart, phospho_genes, slim = TRUE)),
+    #tar_target(re_terms, fetch_reactome(mart, phospho_genes)),
+    #tar_target(kg_terms, get_kegg(species = KEGG_SPECIES, bm_genes = bm_genes)),
+    #tar_target(all_terms, list(go = go_terms, gs = gs_terms, re = re_terms, kg = kg_terms)),
+    tar_target(terms, get_functional_terms_sym()),
+    tar_target(fterms, prepare_terms_fenr(terms, phospho_genes))
   )
 
   read_data <- list(
@@ -87,7 +89,7 @@ targets_main <- function() {
   )
 
   shiny <- list(
-    tar_target(sav_shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de_median, bm_genes, all_terms) %>% write_rds("shiny/data_de.rds", compress = "xz"))
+    tar_target(sav_shiny_de, shiny_data_de(phospho, peptides, proteins, phospho_de_median, bm_genes, fterms) %>% write_rds("shiny/data_de.rds", compress = "xz"))
   )
 
   tables <- list(

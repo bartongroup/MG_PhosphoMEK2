@@ -32,8 +32,27 @@ sh_plot_ma <- function(d, alpha = 0.05, title = NULL) {
     labs(x = expression(log[2]~CPM), y = expression(log[2]~FC), title = title) 
 }
 
+sh_functional_enrichment <- function(genes_all, genes_sel, term_data, gene2name = NULL, max_points = 500,
+                                     min_count = 2, sig_limit = 0.05) {
 
-sh_functional_enrichment <- function(genes_all, genes_sel, term_data, gene2name = NULL,
+  n <- length(genes_sel)
+
+  if(n > 1 && n <= max_points) {
+    fe <- fenr::functional_enrichment(genes_all, genes_sel, term_data, gene2name)
+    
+    if(!is.null(fe)) {
+      fe <- fe |>
+        dplyr::filter(p_adjust < sig_limit) |>
+        dplyr::select(TermID = term_id, Name = term_name, N_with, n_with_sel, OR = odds_ratio, ids, p_value, FDR = p_adjust)
+    }
+  } else if (n > max_points) {
+    fe <- tibble::tibble(Error = stringr::str_glue("Only {max_points} points can be selected."))
+  }
+  fe
+}
+
+
+sh_functional_enrichment_old <- function(genes_all, genes_sel, term_data, gene2name = NULL,
                                  min_count = 2, sig_limit = 0.05) {
   
   gene2term <- term_data$gene2term %>% mutate(gene_name = toupper(gene_name))

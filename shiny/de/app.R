@@ -1,13 +1,11 @@
 ### DE PHOSPHO EXPLORER
 
-libDir <- "/cluster/gjb_lab/mgierlinski/R_shiny/library/4.1"
-if (dir.exists(libDir)) .libPaths(libDir)
-
 library(shiny)
 library(ggbeeswarm)
 library(cowplot)
 library(tidyverse)
 library(DT)
+library(fenr)
 source("func.R")
 
 select <- dplyr::select
@@ -29,7 +27,9 @@ ui <- shinyUI(fluidPage(
   
   tags$style(css),
   
-  titlePanel("MEKi phosphoproteomics"),
+  titlePanel("Phosphoproteomic identification of ERK1/2 targets in human neuromesodermal progenitors"),
+
+  p("This study used phospho-proteomics to identify phospho-dynamic proteins following acute inhibition of ERK1/2 with the MEK1/2 inhibitor PD0325901 in human embryonic stem cell-derived neuromesodermal progenitors."),
 
   fluidRow(
     column(12,
@@ -50,7 +50,7 @@ ui <- shinyUI(fluidPage(
           p("Peptide list"),
           div(style = 'height: 200px; overflow-y: scroll', tableOutput("peptideInfo")),
           br(),
-          radioButtons("enrichment", "Enrichment:", choices = c("GO", "Reactome", "KEGG"), inline = TRUE),
+          radioButtons("enrichment", "Enrichment:", choices = c("GO-CC", "GO-BP", "GO-MF", "Reactome", "KEGG"), inline = TRUE),
           div(style = 'height: 400px; overflow-y: scroll', tableOutput("Enrichment"))
         )
       ),
@@ -136,7 +136,7 @@ server <- function(input, output) {
     df
   })
 
-  enrichmentTable <- function(terms) {
+  enrichmentTable <- function(fterms) {
     xy_data <- get_xy_data()
     pho_sel <- NULL
     fe <- NULL
@@ -149,7 +149,7 @@ server <- function(input, output) {
         unique()
       n <- length(sel_genes)
       if (n > 2 && n <= max_points) {
-        fe <- sh_functional_enrichment(all_genes, sel_genes, terms)
+        fe <- sh_functional_enrichment(all_genes, sel_genes, fterms)
       } else if (n > 2) {
         fe <- data.frame(Error = paste0('only ',max_points,' points can be selected.'))
       }
@@ -158,8 +158,12 @@ server <- function(input, output) {
   }
   
   output$Enrichment <- renderTable({
-    if (input$enrichment == "GO") {
-      d <- data$go
+    if (input$enrichment == "GO-CC") {
+      d <- data$go_cc
+    } else if (input$enrichment == "GO-BP") {
+      d <- data$go_bp
+    } else if (input$enrichment == "GO-MF") {
+      d <- data$go_mf
     } else if (input$enrichment == "Reactome") {
       d <- data$reactome
     } else if (input$enrichment == "KEGG") {
