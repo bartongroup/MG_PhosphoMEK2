@@ -1,10 +1,10 @@
-# Phosphoproteomics of ERK1/2 regulation of neural differentiation (second analysis)
+# Phosphoproteomic identification of ERK1/2 targets in human neuromesodermal progenitors
 
-Software used for phosphoproteomics analysis in the manuscript (soon to be published).
+This study used phospho-proteomics to identify phospho-dynamic proteins following acute inhibition of ERK1/2 with the MEK1/2 inhibitor PD0325901 in human embryonic stem cell-derived neuromesodermal progenitors.
 
 **Maintainer**: Marek Gierlinski
 
-**Collaborators**: Elisenda Raga Gil, Kate Storey
+**Collaborators**: Elisenda Raga Gil, Greg Findlay, Kate Storey
 
 ## Usage
 
