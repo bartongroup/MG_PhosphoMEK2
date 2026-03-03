@@ -128,9 +128,8 @@ tar_read(phospho_dup_example) %>%
   flextable()
 ```
 
-They are all very close on the protein. Perhaps this is how enrichment works - pulling close sites together?
+This is because intensity is measured for the entire peptide ion, while phosphorylation sites are discriminated later, from fragmentation spectra. The probability score is a good indicator of how confident this identification is. Though duplicated intensities make phosphosites dependent (not independent in statistical sense) and can affect the p-values from the differential expression, the effect on DE results is miniscule. Therefore, in the second run of this analysis we decided not to remove duplicates, so they are all reported. 
 
-To avoid problems with differential abundance duplicates are removed, leaving the first one out of each group. `r N(tar_read(n_dup_removed))` phospho sites were removed by this process.
 
 
 ### Abundance distribution

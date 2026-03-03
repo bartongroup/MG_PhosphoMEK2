@@ -321,10 +321,10 @@ deduplicate <- function(set) {
     filter(num > 1) %>% 
     select(id, multi) %>% 
     add_column(dup = 1)
-  set$dat <- set$dat %>% 
-    left_join(dup_sel, by = c("id", "multi")) %>% 
-    filter(is.na(dup)) %>% 
-    select(-dup)
+  #set$dat <- set$dat %>% 
+  #  left_join(dup_sel, by = c("id", "multi")) %>% 
+  #  filter(is.na(dup)) %>% 
+  #  select(-dup)
   set
 }
 

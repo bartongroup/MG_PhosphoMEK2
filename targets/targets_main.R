@@ -18,7 +18,7 @@ targets_main <- function() {
     tar_target(peptides, read_mq(PEPTIDES_FILE, PEPTIDES_DATA_COLUMNS, PEPTIDES_MEASURE_COLUMNS, PEPTIDES_ID_COLUMNS, PEPTIDES_FILTER, metadata)),
     tar_target(phospho,
       read_mq(PHOSPHO_FILE, PHOSPHO_DATA_COLUMNS, PHOSPHO_MEASURE_COLUMNS, PHOSPHO_ID_COLUMNS, PHOSPHO_FILTER, metadata) %>%
-      normalise_to_proteins(proteins) %>%
+      normalise_to_proteins(proteins) |> 
       deduplicate()
     ),
     tar_target(phospho_rep, read_phospho_reporters(PHOSPHO_FILE))
